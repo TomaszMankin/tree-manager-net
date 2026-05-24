@@ -9,6 +9,8 @@ on:
 jobs:
   build-test:
     runs-on: [self-hosted, windows]
+    # Never run on fork PRs — protects the local self-hosted runner from untrusted code
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
 
