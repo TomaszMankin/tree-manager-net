@@ -1,0 +1,7 @@
+# EditorConfig — tree-manager-net code style rules
+root = true
+
+[*.cs]
+# CS1591: Missing XML documentation comment on public member.
+# Domain libraries are not public NuGet packages — suppress project-wide.
+dotnet_diagnostic.CS1591.severity = none
