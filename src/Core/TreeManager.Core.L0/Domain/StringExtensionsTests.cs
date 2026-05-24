@@ -39,6 +39,7 @@ public class StringExtensionsTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void ParsePartialDate_Throws_WhenInputIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => ((string)null!).ParsePartialDate());
+        string input = null;
+        Assert.Throws<ArgumentNullException>(() => input.ParsePartialDate());
     }
 }
