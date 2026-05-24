@@ -1,0 +1,24 @@
+name: Run tests by tier
+description: Runs dotnet test filtered to a single tier trait. Add new tiers by passing tier input — no action changes needed.
+
+inputs:
+  tier:
+    description: Tier name (L0, L1, L2, e2e, ...)
+    required: true
+  configuration:
+    description: Build configuration
+    required: false
+    default: Release
+
+runs:
+  using: composite
+  steps:
+    - name: Run ${{ inputs.tier }} tests
+      shell: pwsh
+      run: |
+        dotnet test TreeManager.sln `
+          --configuration ${{ inputs.configuration }} `
+          --no-build `
+          --filter "Tier=${{ inputs.tier }}" `
+          --logger "trx;LogFileName=${{ inputs.tier }}.trx" `
+          --results-directory test-results/${{ inputs.tier }}

@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: [self-hosted, windows]
+    # Never run on fork PRs — protects the local self-hosted runner from untrusted code
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore TreeManager.sln
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build TreeManager.sln --configuration Release --no-restore
+
+      - name: L0 tests
+        uses: ./.github/actions/run-test-tier
+        with:
+          tier: L0
+
+      - name: L1 tests
+        uses: ./.github/actions/run-test-tier
+        with:
+          tier: L1
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
