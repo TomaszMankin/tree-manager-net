@@ -1,4 +1,4 @@
-using NSubstitute;
+using Moq;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Infrastructure.Settings;
@@ -11,13 +11,13 @@ public class RootPointerStoreTests
     private const string FakePointerParent = @"C:\fake\appdata\TreeManager";
     private const string FakeRootPath = @"C:\fake\family\tree";
 
-    private readonly IFileSystemFacade _fs;
+    private readonly Mock<IFileSystemFacade> _fs;
     private readonly RootPointerStore _sut;
 
     public RootPointerStoreTests()
     {
-        _fs = Substitute.For<IFileSystemFacade>();
-        _sut = new RootPointerStore(_fs, FakePointerPath);
+        _fs = new Mock<IFileSystemFacade>();
+        _sut = new RootPointerStore(_fs.Object, FakePointerPath);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class RootPointerStoreTests
     public void Read_ReturnsEmptyString_WhenPointerFileDoesNotExist()
     {
         //Arrange
-        _fs.FileExists(FakePointerPath).Returns(false);
+        _fs.Setup(x => x.FileExists(FakePointerPath)).Returns(false);
 
         //Act
         var result = _sut.Read();
@@ -39,8 +39,8 @@ public class RootPointerStoreTests
     public void Read_ReturnsTrimmedPath_WhenPointerFileExists()
     {
         //Arrange
-        _fs.FileExists(FakePointerPath).Returns(true);
-        _fs.ReadAllText(FakePointerPath).Returns($"{FakeRootPath}\r\n");
+        _fs.Setup(x => x.FileExists(FakePointerPath)).Returns(true);
+        _fs.Setup(x => x.ReadAllText(FakePointerPath)).Returns($"{FakeRootPath}\r\n");
 
         //Act
         var result = _sut.Read();
@@ -57,7 +57,7 @@ public class RootPointerStoreTests
         _sut.Write(FakeRootPath);
 
         //Assert
-        _fs.Received(1).CreateDirectory(FakePointerParent);
+        _fs.Verify(x => x.CreateDirectory(FakePointerParent), Times.Once());
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class RootPointerStoreTests
         _sut.Write(FakeRootPath);
 
         //Assert
-        _fs.Received(1).WriteAllText(FakePointerPath, FakeRootPath);
+        _fs.Verify(x => x.WriteAllText(FakePointerPath, FakeRootPath), Times.Once());
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public class RootPointerStoreTests
         _sut.Write(firstPath);
         _sut.Write(secondPath);
 
-        //Assert — second call overwrites
-        _fs.Received(1).WriteAllText(FakePointerPath, firstPath);
-        _fs.Received(1).WriteAllText(FakePointerPath, secondPath);
+        //Assert
+        _fs.Verify(x => x.WriteAllText(FakePointerPath, firstPath), Times.Once());
+        _fs.Verify(x => x.WriteAllText(FakePointerPath, secondPath), Times.Once());
     }
 }

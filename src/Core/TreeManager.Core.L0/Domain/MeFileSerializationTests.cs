@@ -13,7 +13,7 @@ public class MeFileSerializationTests
     public void Deserialize_RealPersonFixture_MapsAllFieldsCorrectly()
     {
         //Arrange
-        var rawJson = FixtureLoader.LoadMeFixture();
+        var rawJson = FixtureLoader.Load("me-fixture.json");
 
         //Act — first pass: deserialize from fixture
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions)!;
@@ -49,7 +49,7 @@ public class MeFileSerializationTests
     public void Deserialize_FixtureWithBom_DeserializesSuccessfully()
     {
         //Arrange
-        var rawJson = FixtureLoader.LoadMeFixture(withBom: true);
+        var rawJson = FixtureLoader.Load("me-fixture-bom.json");
 
         //Act
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions);

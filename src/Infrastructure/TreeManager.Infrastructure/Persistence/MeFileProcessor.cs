@@ -2,29 +2,25 @@ using System.Text.Json;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Domain;
-using TreeManager.Core.Domain.Constants;
 
 namespace TreeManager.Infrastructure.Persistence;
 
 public sealed class MeFileProcessor : IMeFileProcessor
 {
+    private const string PeopleListFolderName = "Lista osób";
+
     private readonly IFileSystemFacade _fs;
-    private readonly IReadOnlySet<string> _forbiddenFolders;
 
     public MeFileProcessor(IFileSystemFacade fileSystem)
-        : this(fileSystem, ForbiddenFolders.Default) { }
-
-    public MeFileProcessor(IFileSystemFacade fileSystem, IReadOnlySet<string> forbiddenFolders)
     {
         _fs = fileSystem;
-        _forbiddenFolders = forbiddenFolders;
     }
 
     public IEnumerable<string> ScanMeFiles(string rootPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath, nameof(rootPath));
 
-        var peopleListPath = Path.Combine(rootPath, ForbiddenFolders.PeopleListFolderName);
+        var peopleListPath = Path.Combine(rootPath, PeopleListFolderName);
         if (!_fs.DirectoryExists(peopleListPath))
         {
             throw new DirectoryNotFoundException(peopleListPath);
@@ -32,9 +28,6 @@ public sealed class MeFileProcessor : IMeFileProcessor
 
         foreach (var folder in _fs.EnumerateDirectories(peopleListPath))
         {
-            var folderName = Path.GetFileName(folder);
-            if (_forbiddenFolders.Contains(folderName)) continue;
-
             var meFilePath = Path.Combine(folder, "me.json");
             if (_fs.FileExists(meFilePath))
             {

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using NSubstitute;
+using Moq;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Domain;
@@ -16,28 +16,26 @@ public class MeFileProcessorTests
     private const string BobFolder = @"C:\fake\root\Lista osób\Bob Testowy";
     private const string BobMeJson = @"C:\fake\root\Lista osób\Bob Testowy\me.json";
 
-    private static readonly IReadOnlySet<string> EmptyForbiddenSet = new HashSet<string>();
-
-    private readonly IFileSystemFacade _fs;
+    private readonly Mock<IFileSystemFacade> _fs;
     private readonly MeFileProcessor _sut;
 
     public MeFileProcessorTests()
     {
-        _fs = Substitute.For<IFileSystemFacade>();
-        _sut = new MeFileProcessor(_fs, EmptyForbiddenSet);
+        _fs = new Mock<IFileSystemFacade>();
+        _sut = new MeFileProcessor(_fs.Object);
     }
 
     #region ScanMeFiles
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ScanMeFiles_ReturnsMeFilePaths_WhenListaOsobContainsValidPersonFolders()
+    public void ScanMeFiles_ReturnsMeFilePaths_WhenPersonFoldersExist()
     {
         //Arrange
-        _fs.DirectoryExists(PeopleListPath).Returns(true);
-        _fs.EnumerateDirectories(PeopleListPath).Returns(new[] { AnnaFolder, BobFolder });
-        _fs.FileExists(AnnaMeJson).Returns(true);
-        _fs.FileExists(BobMeJson).Returns(true);
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(PeopleListPath)).Returns(new[] { AnnaFolder, BobFolder });
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        _fs.Setup(x => x.FileExists(BobMeJson)).Returns(true);
 
         //Act
         var result = _sut.ScanMeFiles(RootPath).ToList();
@@ -50,41 +48,17 @@ public class MeFileProcessorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ScanMeFiles_ReturnsEmpty_WhenListaOsobIsEmpty()
+    public void ScanMeFiles_ReturnsEmpty_WhenPersonFolderIsEmpty()
     {
         //Arrange
-        _fs.DirectoryExists(PeopleListPath).Returns(true);
-        _fs.EnumerateDirectories(PeopleListPath).Returns(Array.Empty<string>());
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(PeopleListPath)).Returns(Array.Empty<string>());
 
         //Act
         var result = _sut.ScanMeFiles(RootPath).ToList();
 
         //Assert
         Assert.Empty(result);
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ScanMeFiles_SkipsFolder_WhenFolderNameIsForbidden()
-    {
-        //Arrange
-        var forbiddenSet = new HashSet<string>(StringComparer.Ordinal) { "Pozostałe nieuporządkowane" };
-        var sut = new MeFileProcessor(_fs, forbiddenSet);
-        var forbiddenFolder = @"C:\fake\root\Lista osób\Pozostałe nieuporządkowane";
-        var forbiddenMeJson = @"C:\fake\root\Lista osób\Pozostałe nieuporządkowane\me.json";
-
-        _fs.DirectoryExists(PeopleListPath).Returns(true);
-        _fs.EnumerateDirectories(PeopleListPath).Returns(new[] { forbiddenFolder, AnnaFolder });
-        _fs.FileExists(forbiddenMeJson).Returns(true);
-        _fs.FileExists(AnnaMeJson).Returns(true);
-
-        //Act
-        var result = sut.ScanMeFiles(RootPath).ToList();
-
-        //Assert
-        Assert.Single(result);
-        Assert.Contains(AnnaMeJson, result);
-        Assert.DoesNotContain(forbiddenMeJson, result);
     }
 
     [Fact]
@@ -92,9 +66,9 @@ public class MeFileProcessorTests
     public void ScanMeFiles_SkipsFolder_WhenMeJsonAbsentInsideFolder()
     {
         //Arrange
-        _fs.DirectoryExists(PeopleListPath).Returns(true);
-        _fs.EnumerateDirectories(PeopleListPath).Returns(new[] { AnnaFolder });
-        _fs.FileExists(AnnaMeJson).Returns(false);
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(PeopleListPath)).Returns(new[] { AnnaFolder });
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(false);
 
         //Act
         var result = _sut.ScanMeFiles(RootPath).ToList();
@@ -105,10 +79,10 @@ public class MeFileProcessorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ScanMeFiles_Throws_WhenListaOsobDirectoryDoesNotExist()
+    public void ScanMeFiles_Throws_WhenPersonFolderDoesNotExist()
     {
         //Arrange
-        _fs.DirectoryExists(PeopleListPath).Returns(false);
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(false);
 
         //Act & Assert
         Assert.Throws<DirectoryNotFoundException>(() => _sut.ScanMeFiles(RootPath).ToList());
@@ -137,27 +111,26 @@ public class MeFileProcessorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ScanMeFiles_DoesNotRecurseIntoNestedSubfolders()
+    public void ScanMeFiles_DoesNotRecurseIntoNestedSubfolders_WhenNestedFoldersExists()
     {
         //Arrange
         var nestedFolder = @"C:\fake\root\Lista osób\Anna Iksińska\Children";
         var nestedMeJson = @"C:\fake\root\Lista osób\Anna Iksińska\Children\me.json";
 
-        _fs.DirectoryExists(PeopleListPath).Returns(true);
-        _fs.EnumerateDirectories(PeopleListPath).Returns(new[] { AnnaFolder });
-        _fs.FileExists(AnnaMeJson).Returns(true);
-        // nested: would only be reached if recursive enumeration happened
-        _fs.EnumerateDirectories(AnnaFolder).Returns(new[] { nestedFolder });
-        _fs.FileExists(nestedMeJson).Returns(true);
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(PeopleListPath)).Returns(new[] { AnnaFolder });
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(AnnaFolder)).Returns(new[] { nestedFolder });
+        _fs.Setup(x => x.FileExists(nestedMeJson)).Returns(true);
 
         //Act
         var result = _sut.ScanMeFiles(RootPath).ToList();
 
-        //Assert — only Anna's direct me.json returned; no recursion
+        //Assert
         Assert.Single(result);
         Assert.Contains(AnnaMeJson, result);
-        _fs.Received(1).EnumerateDirectories(PeopleListPath);
-        _fs.DidNotReceive().EnumerateDirectories(AnnaFolder);
+        _fs.Verify(x => x.EnumerateDirectories(PeopleListPath), Times.Once());
+        _fs.Verify(x => x.EnumerateDirectories(AnnaFolder), Times.Never());
     }
 
     #endregion
@@ -169,9 +142,9 @@ public class MeFileProcessorTests
     public void ReadMeFile_ReturnsMeFile_WhenContentIsValid()
     {
         //Arrange
-        var json = FixtureLoader.LoadMeFixture();
-        _fs.FileExists(AnnaMeJson).Returns(true);
-        _fs.ReadAllText(AnnaMeJson).Returns(json);
+        var json = FixtureLoader.Load("me-fixture.json");
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        _fs.Setup(x => x.ReadAllText(AnnaMeJson)).Returns(json);
 
         //Act
         var result = _sut.ReadMeFile(AnnaMeJson);
@@ -187,8 +160,8 @@ public class MeFileProcessorTests
     public void ReadMeFile_Throws_WhenContentIsMalformedJson()
     {
         //Arrange
-        _fs.FileExists(AnnaMeJson).Returns(true);
-        _fs.ReadAllText(AnnaMeJson).Returns("not-valid-json{{{");
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        _fs.Setup(x => x.ReadAllText(AnnaMeJson)).Returns("not-valid-json{{{");
 
         //Act & Assert
         Assert.Throws<JsonException>(() => _sut.ReadMeFile(AnnaMeJson));
@@ -199,7 +172,7 @@ public class MeFileProcessorTests
     public void ReadMeFile_Throws_WhenFileDoesNotExist()
     {
         //Arrange
-        _fs.FileExists(AnnaMeJson).Returns(false);
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(false);
 
         //Act & Assert
         Assert.Throws<FileNotFoundException>(() => _sut.ReadMeFile(AnnaMeJson));
@@ -235,7 +208,7 @@ public class MeFileProcessorTests
         _sut.WriteMeFile(AnnaMeJson, meFile);
 
         //Assert
-        _fs.Received(1).WriteAllText(AnnaMeJson, expectedJson);
+        _fs.Verify(x => x.WriteAllText(AnnaMeJson, expectedJson), Times.Once());
     }
 
     [Fact]
@@ -270,9 +243,9 @@ public class MeFileProcessorTests
     public void Roundtrip_PreservesAllFields_WhenReadModifyWriteCycleApplied()
     {
         //Arrange
-        var json = FixtureLoader.LoadMeFixture();
-        _fs.FileExists(AnnaMeJson).Returns(true);
-        _fs.ReadAllText(AnnaMeJson).Returns(json);
+        var json = FixtureLoader.Load("me-fixture.json");
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        _fs.Setup(x => x.ReadAllText(AnnaMeJson)).Returns(json);
 
         //Act
         var original = _sut.ReadMeFile(AnnaMeJson);
@@ -281,7 +254,7 @@ public class MeFileProcessorTests
 
         //Assert
         var expectedJson = JsonSerializer.Serialize(modified, MeFile.DefaultOptions);
-        _fs.Received(1).WriteAllText(AnnaMeJson, expectedJson);
+        _fs.Verify(x => x.WriteAllText(AnnaMeJson, expectedJson), Times.Once());
     }
 
     #endregion

@@ -4,11 +4,9 @@ namespace TreeManager.Common.TestUtilities;
 
 public static class FixtureLoader
 {
-    public static string LoadMeFixture(bool withBom = false)
+    public static string Load(string fixtureName)
     {
-        var name = withBom
-            ? "TreeManager.Common.TestUtilities.Fixtures.me-fixture-bom.json"
-            : "TreeManager.Common.TestUtilities.Fixtures.me-fixture.json";
+        var name = $"TreeManager.Common.TestUtilities.Fixtures.{fixtureName}";
         var assembly = typeof(FixtureLoader).Assembly;
         using var stream = assembly.GetManifestResourceStream(name)
             ?? throw new InvalidOperationException(
