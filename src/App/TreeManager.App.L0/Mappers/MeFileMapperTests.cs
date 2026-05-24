@@ -1,38 +1,31 @@
 using System;
 using System.Collections.Generic;
-using TreeManager.App.Services;
+using TreeManager.App.Mappers;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Domain;
 
-namespace TreeManager.App.L0.Services;
+namespace TreeManager.App.L0.Mappers;
 
-public class PersonViewModelMapperTests
+public class MeFileMapperTests
 {
-    private readonly PersonViewModelMapper _sut;
-
     private const string SampleFirstName = "Jan";
     private const string SampleLastName = "Kowalski";
     private const string SamplePersonName = "Jan Kowalski";
     private const string SampleLocation = @"C:\fake\tree\Kowalski_Jan";
     private static readonly Guid SampleGuid = Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb");
 
-    public PersonViewModelMapperTests()
-    {
-        _sut = new PersonViewModelMapper();
-    }
-
-    #region FromMeFile
+    #region ToViewModel
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void FromMeFile_CopiesAllNameFields_WhenSourceIsValid()
+    public void ToViewModel_CopiesAllNameFields_WhenSourceIsValid()
     {
         //Arrange
         var source = BuildSampleMeFile();
 
         //Act
-        var result = _sut.FromMeFile(source);
+        var result = source.ToViewModel();
 
         //Assert
         Assert.Equal(SampleGuid, result.UniqueIdentifier);
@@ -50,13 +43,13 @@ public class PersonViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void FromMeFile_PreservesSexEnum_WhenSourceSexIsFemale()
+    public void ToViewModel_PreservesSexEnum_WhenSourceSexIsFemale()
     {
         //Arrange
         var source = BuildSampleMeFile();
 
         //Act
-        var result = _sut.FromMeFile(source);
+        var result = source.ToViewModel();
 
         //Assert
         Assert.Equal(Sex.Female, result.Sex);
@@ -64,9 +57,9 @@ public class PersonViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void FromMeFile_Throws_WhenSourceIsNull()
+    public void ToViewModel_Throws_WhenSourceIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _sut.FromMeFile(null));
+        Assert.Throws<ArgumentNullException>(() => ((MeFile)null).ToViewModel());
     }
 
     #endregion
@@ -94,7 +87,7 @@ public class PersonViewModelMapperTests
         };
 
         //Act
-        var result = _sut.ToMeFile(vm);
+        var result = vm.ToMeFile();
 
         //Assert
         Assert.Equal(SampleGuid, result.UniqueIdentifier);
@@ -125,7 +118,7 @@ public class PersonViewModelMapperTests
         };
 
         //Act
-        var result = _sut.ToMeFile(vm, existing);
+        var result = vm.ToMeFile(existing);
 
         //Assert — relationship lists and other untouched fields flow through
         Assert.Equal(existing.Spouse, result.Spouse);
@@ -145,7 +138,35 @@ public class PersonViewModelMapperTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void ToMeFile_Throws_WhenSourceIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => _sut.ToMeFile(null));
+        Assert.Throws<ArgumentNullException>(() => ((PersonViewModel)null).ToMeFile());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_FillsUnknown_WhenFirstNameIsEmpty()
+    {
+        //Arrange
+        var vm = new PersonViewModel { FirstName = string.Empty, LastName = "Kowalski", Sex = Sex.Male };
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal("(nieznane)", result.FirstName);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_FillsUnknown_WhenLastNameIsEmpty()
+    {
+        //Arrange
+        var vm = new PersonViewModel { FirstName = "Jan", LastName = string.Empty, Sex = Sex.Male };
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal("(nieznane)", result.LastName);
     }
 
     #endregion
@@ -154,15 +175,15 @@ public class PersonViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Roundtrip_PreservesAllFields_WhenMappedThroughVm()
+    public void ToMeFile_PreservesRelationshipsAndUpdatesFields_WhenVmModifiedAfterLoad()
     {
         //Arrange
         var original = BuildSampleMeFile();
+        var vm = original.ToViewModel();
+        vm.FirstName = "Marek";
 
         //Act
-        var vm = _sut.FromMeFile(original);
-        vm.FirstName = "Marek";
-        var result = _sut.ToMeFile(vm, original);
+        var result = vm.ToMeFile(original);
 
         //Assert — mutated field updated; relationship lists preserved; identifier preserved
         Assert.Equal("Marek", result.FirstName);

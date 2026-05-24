@@ -2,11 +2,13 @@ using System;
 using TreeManager.App.ViewModels;
 using TreeManager.Core.Domain;
 
-namespace TreeManager.App.Services;
+namespace TreeManager.App.Mappers;
 
-public sealed class PersonViewModelMapper
+public static class MeFileMapper
 {
-    public PersonViewModel FromMeFile(MeFile source)
+    private const string Unknown = "(nieznane)";
+
+    public static PersonViewModel ToViewModel(this MeFile source)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -26,7 +28,7 @@ public sealed class PersonViewModelMapper
         };
     }
 
-    public MeFile ToMeFile(PersonViewModel source, MeFile existing = null)
+    public static MeFile ToMeFile(this PersonViewModel source, MeFile existing = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -39,9 +41,9 @@ public sealed class PersonViewModelMapper
                 : source.UniqueIdentifier,
             PersonName = source.PersonName,
             Location = source.Location,
-            FirstName = source.FirstName,
+            FirstName = string.IsNullOrEmpty(source.FirstName) ? Unknown : source.FirstName,
             OtherFirstNames = source.OtherFirstNames,
-            LastName = source.LastName,
+            LastName = string.IsNullOrEmpty(source.LastName) ? Unknown : source.LastName,
             OtherLastNames = source.OtherLastNames,
             MaidenName = source.MaidenName,
             OtherMaidenNames = source.OtherMaidenNames,

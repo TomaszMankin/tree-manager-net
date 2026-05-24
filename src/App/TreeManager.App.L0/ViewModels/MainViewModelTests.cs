@@ -64,7 +64,6 @@ public class MainViewModelTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Constructor_InitializesCurrentModeToAdd_WhenInstantiated()
     {
-        //Act + Assert (one-liner; AAA omitted per code standards)
         Assert.Equal(AppMode.Add, _sut.CurrentMode);
     }
 
@@ -76,7 +75,6 @@ public class MainViewModelTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Constructor_HoldsPersonViewModel_WhenInjected()
     {
-        //Act + Assert (one-liner; AAA omitted per code standards)
         Assert.NotNull(_sut.Person);
     }
 

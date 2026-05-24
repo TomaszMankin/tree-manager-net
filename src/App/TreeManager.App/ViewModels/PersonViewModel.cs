@@ -7,19 +7,13 @@ namespace TreeManager.App.ViewModels;
 
 public sealed partial class PersonViewModel : ObservableValidator
 {
-    // ── visible name fields ──
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Required(ErrorMessage = "Imię jest wymagane")]
     private string _firstName = string.Empty;
 
     [ObservableProperty]
     private string _otherFirstNames = string.Empty;
 
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Required(ErrorMessage = "Nazwisko jest wymagane")]
     private string _lastName = string.Empty;
 
     [ObservableProperty]
@@ -39,8 +33,6 @@ public sealed partial class PersonViewModel : ObservableValidator
     [CustomValidation(typeof(PersonViewModel), nameof(ValidateSex))]
     private Sex _sex = Sex.Unknown;
 
-    // ── hidden roundtrip fields ──
-
     [ObservableProperty]
     private string _personName = string.Empty;
 
@@ -49,8 +41,6 @@ public sealed partial class PersonViewModel : ObservableValidator
 
     [ObservableProperty]
     private Guid _uniqueIdentifier = Guid.Empty;
-
-    // ── validation helpers ──
 
     public static ValidationResult ValidateSex(Sex value, ValidationContext context)
     {

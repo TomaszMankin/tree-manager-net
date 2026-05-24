@@ -19,21 +19,6 @@ public class PersonViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void FirstName_HasError_WhenEmpty()
-    {
-        //Arrange
-        _sut.FirstName = string.Empty;
-
-        //Act
-        _sut.ValidateAll();
-
-        //Assert
-        Assert.True(_sut.HasErrors);
-        Assert.NotEmpty(_sut.GetErrors(nameof(PersonViewModel.FirstName)).Cast<ValidationResult>());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void FirstName_HasNoError_WhenPopulated()
     {
         //Arrange
@@ -49,21 +34,6 @@ public class PersonViewModelTests
     #endregion
 
     #region Validation — LastName
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void LastName_HasError_WhenEmpty()
-    {
-        //Arrange
-        _sut.LastName = string.Empty;
-
-        //Act
-        _sut.ValidateAll();
-
-        //Assert
-        Assert.True(_sut.HasErrors);
-        Assert.NotEmpty(_sut.GetErrors(nameof(PersonViewModel.LastName)).Cast<ValidationResult>());
-    }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
@@ -87,7 +57,8 @@ public class PersonViewModelTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Sex_HasError_WhenUnknown()
     {
-        //Arrange — Sex is Unknown by default
+        //Arrange
+        _sut.Sex = Sex.Unknown;
 
         //Act
         _sut.ValidateAll();
@@ -127,45 +98,36 @@ public class PersonViewModelTests
 
     #endregion
 
-    #region Construction
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Constructor_InitializesDefaults_WhenInstantiated()
-    {
-        //Act + Assert (AAA omitted per code standards — pure assertion block)
-        Assert.Equal(string.Empty, _sut.FirstName);
-        Assert.Equal(string.Empty, _sut.LastName);
-        Assert.Equal(Sex.Unknown, _sut.Sex);
-        Assert.False(_sut.HasMaidenName);
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void HasErrors_IsFalse_WhenJustConstructed()
-    {
-        //Act + Assert (one-liner; AAA omitted per code standards)
-        Assert.False(_sut.HasErrors);
-    }
-
-    #endregion
-
     #region ValidateAll
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ValidateAll_ReportsAllErrors_WhenAllRequiredFieldsEmpty()
+    public void ValidateAll_ReportsError_WhenSexIsUnknown()
     {
-        //Arrange — fresh VM; FirstName="", LastName="", Sex=Unknown
+        //Arrange
+        _sut.FirstName = string.Empty;
+        _sut.LastName = string.Empty;
+        _sut.Sex = Sex.Unknown;
 
         //Act
         _sut.ValidateAll();
 
         //Assert
         Assert.True(_sut.HasErrors);
-        Assert.NotEmpty(_sut.GetErrors(nameof(PersonViewModel.FirstName)).Cast<ValidationResult>());
-        Assert.NotEmpty(_sut.GetErrors(nameof(PersonViewModel.LastName)).Cast<ValidationResult>());
+        Assert.Empty(_sut.GetErrors(nameof(PersonViewModel.FirstName)).Cast<ValidationResult>());
+        Assert.Empty(_sut.GetErrors(nameof(PersonViewModel.LastName)).Cast<ValidationResult>());
         Assert.NotEmpty(_sut.GetErrors(nameof(PersonViewModel.Sex)).Cast<ValidationResult>());
+    }
+
+    #endregion
+
+    #region HasErrors
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void HasErrors_IsFalse_WhenJustConstructed()
+    {
+        Assert.False(_sut.HasErrors);
     }
 
     #endregion

@@ -22,8 +22,11 @@ public class SexToBoolConverterTests
     public void Convert_ReturnsTrue_WhenSexMatchesParameter()
     {
         //Arrange
+        var sexValue = Sex.Male;
+        var converterParam = Sex.Male;
+
         //Act
-        var result = _sut.Convert(Sex.Male, typeof(bool), Sex.Male, CultureInfo.InvariantCulture);
+        var result = _sut.Convert(sexValue, typeof(bool), converterParam, CultureInfo.InvariantCulture);
 
         //Assert
         Assert.Equal(true, result);
@@ -34,8 +37,11 @@ public class SexToBoolConverterTests
     public void Convert_ReturnsFalse_WhenSexDiffersFromParameter()
     {
         //Arrange
+        var sexValue = Sex.Female;
+        var converterParam = Sex.Male;
+
         //Act
-        var result = _sut.Convert(Sex.Female, typeof(bool), Sex.Male, CultureInfo.InvariantCulture);
+        var result = _sut.Convert(sexValue, typeof(bool), converterParam, CultureInfo.InvariantCulture);
 
         //Assert
         Assert.Equal(false, result);
@@ -50,8 +56,11 @@ public class SexToBoolConverterTests
     public void ConvertBack_ReturnsSex_WhenIsCheckedTrue()
     {
         //Arrange
+        var isChecked = true;
+        var converterParam = Sex.Male;
+
         //Act
-        var result = _sut.ConvertBack(true, typeof(Sex), Sex.Male, CultureInfo.InvariantCulture);
+        var result = _sut.ConvertBack(isChecked, typeof(Sex), converterParam, CultureInfo.InvariantCulture);
 
         //Assert
         Assert.Equal(Sex.Male, result);
@@ -62,8 +71,11 @@ public class SexToBoolConverterTests
     public void ConvertBack_ReturnsBindingDoNothing_WhenIsCheckedFalse()
     {
         //Arrange
+        var isChecked = false;
+        var converterParam = Sex.Male;
+
         //Act
-        var result = _sut.ConvertBack(false, typeof(Sex), Sex.Male, CultureInfo.InvariantCulture);
+        var result = _sut.ConvertBack(isChecked, typeof(Sex), converterParam, CultureInfo.InvariantCulture);
 
         //Assert
         Assert.Equal(Binding.DoNothing, result);
