@@ -8,23 +8,12 @@ namespace TreeManager.Core.L0.Domain;
 
 public class MeFileSerializationTests
 {
-    private static string LoadFixture(string resourceName)
-    {
-        var assembly = typeof(MeFileSerializationTests).Assembly;
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException(
-                $"Embedded resource '{resourceName}' not found. Available: " +
-                string.Join(", ", assembly.GetManifestResourceNames()));
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Deserialize_RealPersonFixture_MapsAllFieldsCorrectly()
     {
         //Arrange
-        var rawJson = LoadFixture("TreeManager.Core.L0.Fixtures.me-fixture.json");
+        var rawJson = FixtureLoader.Load("me-fixture.json");
 
         //Act — first pass: deserialize from fixture
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions)!;
@@ -60,7 +49,7 @@ public class MeFileSerializationTests
     public void Deserialize_FixtureWithBom_DeserializesSuccessfully()
     {
         //Arrange
-        var rawJson = LoadFixture("TreeManager.Core.L0.Fixtures.me-fixture-bom.json");
+        var rawJson = FixtureLoader.Load("me-fixture-bom.json");
 
         //Act
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions);
