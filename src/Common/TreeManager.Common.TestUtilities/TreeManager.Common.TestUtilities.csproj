@@ -2,4 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\me-fixture.json" />
+    <EmbeddedResource Include="Fixtures\me-fixture-bom.json" />
+  </ItemGroup>
+
 </Project>
