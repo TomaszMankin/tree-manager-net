@@ -44,7 +44,7 @@ public class SexEnumTests
     public void Deserialize_UnaccentedMezczyzna_ReturnsMale()
     {
         //Arrange
-        // py-tree-manager fixtures use unaccented form
+        // Unaccented variant accepted for backward compatibility with legacy saved files
         var legacyWireValue = WireMaleUnaccented;
 
         //Act
