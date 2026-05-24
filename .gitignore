@@ -86,3 +86,9 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# Windows local runner
+.local-runner
+
+# Claude agentic artifacts
+.pipeline
