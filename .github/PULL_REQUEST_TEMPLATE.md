@@ -1,12 +1,18 @@
-<!-- Closes #N -->
+<!-- Title format: [Fix|Feature|Refactor|Docs|Chore] [#N] Short title -->
+<!-- Example: [Feature] [#2] Domain model MeFile and IFileSystemFacade -->
+
+Closes #N
 
 ## What
-<!-- One or two sentences. What this PR adds / changes / removes. -->
+<!-- 1-2 sentences. What this PR adds / changes / removes. -->
+
+## Links
+- Issue: #N (agent spec + acceptance criteria)
+- ADRs: <!-- ADR-NNN title; remove if none -->
+- Depends on: <!-- #N if blocked on another PR; remove if none -->
 
 ## Checklist
-- [ ] Tests pass (`dotnet test`)
-- [ ] New L0/L1 tests added for changed logic
-- [ ] ADR written if a non-obvious decision was made
-
-## ADRs
-<!-- ADR-NNN: one-line decision summary. Remove section if no new ADRs. -->
+- [ ] `dotnet test --filter "Tier=L0"` passes
+- [ ] L1 tests added if filesystem I/O introduced
+- [ ] ADR written for any non-obvious decision (`docs/decisions/`)
+- [ ] Issue `Done when` items checked off
