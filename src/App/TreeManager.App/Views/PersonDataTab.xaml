@@ -1,0 +1,57 @@
+<UserControl x:Class="TreeManager.App.Views.PersonDataTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TreeManager.App.ViewModels"
+             xmlns:domain="clr-namespace:TreeManager.Core.Domain;assembly=TreeManager.Core"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:PersonViewModel}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,24" MaxWidth="580" HorizontalAlignment="Left">
+
+            <!-- Imię i nazwisko -->
+            <TextBlock Text="Imię i nazwisko" Style="{StaticResource SectionHeader}"/>
+
+            <TextBlock Text="Imię *" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
+
+            <TextBlock Text="Inne imiona (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding OtherFirstNames, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Text="Nazwisko *" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
+
+            <TextBlock Text="Inne nazwiska (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding OtherLastNames, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <Separator Margin="0,16,0,20" Background="#E0E0E0"/>
+
+            <!-- Dodatkowe informacje -->
+            <TextBlock Text="Dodatkowe informacje" Style="{StaticResource SectionHeader}"/>
+
+            <CheckBox Content="Ma nazwisko panieńskie"
+                      IsChecked="{Binding HasMaidenName}"
+                      Margin="0,0,0,12" FontSize="14"/>
+
+            <TextBlock Text="Nazwisko panieńskie" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding MaidenName, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding HasMaidenName}"/>
+
+            <TextBlock Text="Inne nazwiska panieńskie" Style="{StaticResource FieldLabel}"/>
+            <TextBox Text="{Binding OtherMaidenNames, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding HasMaidenName}"/>
+
+            <TextBlock Text="Płeć *" Style="{StaticResource FieldLabel}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
+                <RadioButton Content="Mężczyzna" FontSize="16"
+                             IsChecked="{Binding Sex, Converter={StaticResource SexToBoolConverter}, ConverterParameter={x:Static domain:Sex.Male}}"
+                             Margin="0,0,32,0" VerticalAlignment="Center"/>
+                <RadioButton Content="Kobieta" FontSize="16"
+                             IsChecked="{Binding Sex, Converter={StaticResource SexToBoolConverter}, ConverterParameter={x:Static domain:Sex.Female}}"
+                             VerticalAlignment="Center"/>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

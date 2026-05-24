@@ -7,5 +7,32 @@
         <SolidColorBrush x:Key="EditTreeModeBrush" Color="#E0F7FA"/>
         <SolidColorBrush x:Key="EditDraftModeBrush" Color="#F9FBE7"/>
         <conv:ModeToBackgroundBrushConverter x:Key="ModeToBackgroundBrushConverter"/>
+        <conv:SexToBoolConverter x:Key="SexToBoolConverter"/>
+
+        <!-- Implicit TextBox style — applied to all TextBox controls in app -->
+        <Style TargetType="TextBox">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#B0BEC5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#37474F"/>
+            <Setter Property="Margin" Value="0,6,0,3"/>
+        </Style>
+
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#1565C0"/>
+            <Setter Property="Margin" Value="0,4,0,14"/>
+        </Style>
     </Application.Resources>
 </Application>
