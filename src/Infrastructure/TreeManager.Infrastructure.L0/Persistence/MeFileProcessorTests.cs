@@ -215,7 +215,10 @@ public class MeFileProcessorTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void WriteMeFile_Throws_WhenPathIsNull()
     {
+        //Arrange
         var meFile = new MeFile();
+
+        //Act & Assert
         Assert.Throws<ArgumentNullException>(() => _sut.WriteMeFile(null, meFile));
     }
 
@@ -223,7 +226,10 @@ public class MeFileProcessorTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void WriteMeFile_Throws_WhenPathIsEmpty()
     {
+        //Arrange
         var meFile = new MeFile();
+
+        //Act & Assert
         Assert.Throws<ArgumentException>(() => _sut.WriteMeFile(string.Empty, meFile));
     }
 

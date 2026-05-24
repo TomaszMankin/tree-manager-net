@@ -4,7 +4,7 @@ using TreeManager.Core.Domain;
 
 public interface IMeFileProcessor
 {
-    /// <summary>Enumerates me.json paths under &lt;rootPath&gt;/Lista osób/, depth-1 only, forbidden folders skipped.</summary>
+    /// <summary>Enumerates me.json paths under &lt;rootPath&gt;/Lista osób/, depth-1 only.</summary>
     IEnumerable<string> ScanMeFiles(string rootPath);
 
     /// <summary>Reads and deserializes the me.json at <paramref name="meFilePath"/>.</summary>
