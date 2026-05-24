@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TreeManager.Core\TreeManager.Core.csproj" />
+    <ProjectReference Include="..\..\Core\TreeManager.Core\TreeManager.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

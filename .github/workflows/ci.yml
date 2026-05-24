@@ -30,22 +30,9 @@ jobs:
           tier: L0
 
       - name: L1 tests
-        if: success()
         uses: ./.github/actions/run-test-tier
         with:
           tier: L1
-
-      - name: L2 tests (stub)
-        if: false  # toggle to true once headed WPF suite exists (sprint-20)
-        uses: ./.github/actions/run-test-tier
-        with:
-          tier: L2
-
-      - name: e2e tests (stub)
-        if: false  # toggle to true once e2e suite exists
-        uses: ./.github/actions/run-test-tier
-        with:
-          tier: e2e
 
       - name: Upload test results
         if: always()

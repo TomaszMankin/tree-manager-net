@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TreeManager.Core\TreeManager.Core.csproj" />
-    <ProjectReference Include="..\TreeManager.Infrastructure\TreeManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Core\TreeManager.Core\TreeManager.Core.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\TreeManager.Infrastructure\TreeManager.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
