@@ -4,3 +4,4 @@
 |---|-------|--------|------|
 | 001 | Stack and project layout | Accepted | 2026-05-24 |
 | 002 | me.json schema and PartialDate rename | Accepted | 2026-05-24 |
+| 003 | Forbidden folders and people-list folder | Accepted | 2026-05-24 |
