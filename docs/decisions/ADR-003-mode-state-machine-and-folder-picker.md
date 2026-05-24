@@ -1,4 +1,4 @@
-# ADR-004 — Mode state machine and folder-picker library choice
+# ADR-003 — Mode state machine and folder-picker library choice
 
 **Status:** Accepted
 **Date:** 2026-05-24
@@ -39,5 +39,4 @@ Also: WPF in .NET 6 had no native folder picker, forcing Ookii.Dialogs.Wpf or Wi
 + `IRootPickerService` seam lets bootstrap flow be L0-tested with Moq; dialog impl stays a thin wrapper.
 + Brush resources are theming-ready without converter changes.
 - `IValueConverter` needed (small ceremony) versus a direct `Grid.Style` `DataTrigger`; converter generalizes when other surfaces need the same tint.
-- `Application.Current` dependency in converter means converter tests need an `ApplicationResourceFixture` (one xUnit class fixture).
 - Bootstrap tests cover decision branches only; sprint-20 L2 test validates "user picks folder → pointer file written" end-to-end on a real desktop session.
