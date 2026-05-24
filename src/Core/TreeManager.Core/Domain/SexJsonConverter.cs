@@ -3,11 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace TreeManager.Core.Domain;
 
-/// <summary>
-/// Custom JSON converter for <see cref="Sex"/>. Writes Polish words on serialize.
-/// On deserialize accepts both accented "Mężczyzna" and unaccented "Mezczyzna"
-/// (py-tree-manager fixtures use unaccented form).
-/// </summary>
+/// <summary>Custom JSON converter for <see cref="Sex"/>. Writes Polish words on serialize. On deserialize accepts both accented "Mężczyzna" and unaccented "Mezczyzna".</summary>
 public sealed class SexJsonConverter : JsonConverter<Sex>
 {
     public override Sex Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

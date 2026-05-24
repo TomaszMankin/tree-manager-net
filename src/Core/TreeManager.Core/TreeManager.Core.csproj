@@ -2,10 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <!-- CS1591: Missing XML doc on public member. Suppress project-wide rather than adding
-         XML docs to every generated record/enum member. This is a domain-only library,
-         not a public NuGet package. Suppress choice documented in code-summary.md. -->
-    <NoWarn>CS1591</NoWarn>
   </PropertyGroup>
 
 </Project>

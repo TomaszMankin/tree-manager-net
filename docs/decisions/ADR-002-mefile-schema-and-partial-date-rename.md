@@ -5,7 +5,7 @@ Date: 2026-05-24
 
 ## Problem
 
-New repo (tree-manager-net) must read/write py-tree-manager "me.json" files without data loss. Python writes specific snake_case property names + Polish wire values for `sex` + string-encoded partial dates. Drift = corrupted files on round-trip = elderly user loses family data. The familytree reference repo had: a typo (`UniqueIndentifier`), a wrong type (`Notes` as `List<string>` instead of `string`), a non-descriptive name (`ExtendedDateTime`), and missing 10 of the 22 properties. All must be fixed before any callers exist.
+New repo (tree-manager-net) must read/write py-tree-manager "me.json" files without data loss. Python writes specific snake_case property names + Polish wire values for `sex` + string-encoded partial dates. Drift = corrupted files on round-trip = user loses family data. The familytree reference repo had: a typo (`UniqueIndentifier`), a wrong type (`Notes` as `List<string>` instead of `string`), a non-descriptive name (`ExtendedDateTime`), and missing 10 of the 22 properties. All must be fixed before any callers exist.
 
 ## Decision
 

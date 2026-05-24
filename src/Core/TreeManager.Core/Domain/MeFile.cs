@@ -4,11 +4,6 @@ using System.Text.Json.Serialization;
 
 namespace TreeManager.Core.Domain;
 
-/// <summary>
-/// Represents the content of a py-tree-manager "me.json" person file.
-/// 22 init-only properties with explicit snake_case wire names (no global naming policy — drift = data loss).
-/// See ADR-002 for schema and wire-format decisions.
-/// </summary>
 public sealed record MeFile
 {
     /// <summary>

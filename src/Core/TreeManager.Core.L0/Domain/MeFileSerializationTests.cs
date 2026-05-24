@@ -21,15 +21,15 @@ public class MeFileSerializationTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Roundtrip_RealPyTreeManagerFixture_PreservesAllFields()
+    public void Deserialize_RealPersonFixture_MapsAllFieldsCorrectly()
     {
-        // Arrange
+        //Arrange
         var rawJson = LoadFixture("TreeManager.Core.L0.Fixtures.me-fixture.json");
 
-        // Act — first pass: deserialize from fixture
+        //Act — first pass: deserialize from fixture
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions)!;
 
-        // Assert structural values from fixture
+        //Assert structural values from fixture
         Assert.Equal(Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"), meFile.UniqueIdentifier);
         Assert.Equal("Jan Testowy", meFile.PersonName);
         Assert.Equal("Jan", meFile.FirstName);
@@ -57,15 +57,15 @@ public class MeFileSerializationTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Roundtrip_RealFixtureWithBom_StripsBom()
+    public void Deserialize_FixtureWithBom_DeserializesSuccessfully()
     {
-        // Arrange — BOM fixture
+        //Arrange
         var rawJson = LoadFixture("TreeManager.Core.L0.Fixtures.me-fixture-bom.json");
 
-        // Act — System.Text.Json must tolerate BOM transparently
+        //Act
         var meFile = JsonSerializer.Deserialize<MeFile>(rawJson, MeFile.DefaultOptions);
 
-        // Assert — deserialization succeeded and produced valid data
+        //Assert
         Assert.NotNull(meFile);
         Assert.Equal(Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"), meFile.UniqueIdentifier);
         Assert.Equal("Jan Testowy", meFile.PersonName);
@@ -73,15 +73,15 @@ public class MeFileSerializationTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Serialize_DefaultMeFile_EmitsSnakeCasePropertyNames()
+    public void Serialize_MeFile_EmitsSnakeCasePropertyNames()
     {
-        // Arrange
+        //Arrange
         var meFile = new MeFile { UniqueIdentifier = Guid.NewGuid() };
 
-        // Act
+        //Act
         var json = JsonSerializer.Serialize(meFile, MeFile.DefaultOptions);
 
-        // Assert — wire uses snake_case NOT PascalCase
+        //Assert — wire uses snake_case NOT PascalCase
         Assert.Contains("\"unique_identifier\"", json);
         Assert.DoesNotContain("\"UniqueIdentifier\"", json);
         Assert.Contains("\"person_name\"", json);
@@ -90,14 +90,14 @@ public class MeFileSerializationTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void MeFile_HasExactly22Properties_AllWithJsonPropertyName()
+    public void MeFile_AllPublicProperties_HaveJsonPropertyNameAttribute()
     {
-        // Arrange
+        //Arrange
         var props = typeof(MeFile).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.GetCustomAttribute<System.Text.Json.Serialization.JsonPropertyNameAttribute>() != null)
             .ToArray();
 
-        // Act & Assert
+        //Act & Assert
         Assert.Equal(22, props.Length);
         foreach (var p in props)
         {
