@@ -1,0 +1,29 @@
+<UserControl x:Class="TreeManager.App.Views.MultiPersonPickerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <ComboBox x:Name="CandidatesBox"
+                  IsEditable="True"
+                  Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                  ItemsSource="{Binding Candidates}"
+                  DisplayMemberPath="DisplayName"
+                  Margin="0,0,0,4"/>
+        <Button Content="Dodaj"
+                Command="{Binding AddCommand}"
+                CommandParameter="{Binding ElementName=CandidatesBox, Path=SelectedItem}"
+                HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,8"/>
+        <ListView ItemsSource="{Binding Selected}" MinHeight="60" MaxHeight="200">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Usuń"
+                                Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                CommandParameter="{Binding}"
+                                Padding="8,2" Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </StackPanel>
+</UserControl>

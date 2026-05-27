@@ -9,7 +9,7 @@ public class MainViewModelTests
 
     public MainViewModelTests()
     {
-        _sut = new MainViewModel(new PersonViewModel(), new DatesTabViewModel());
+        _sut = new MainViewModel(new PersonViewModel(), new DatesTabViewModel(), new FamilyTabViewModel());
     }
 
     #region SwitchMode
