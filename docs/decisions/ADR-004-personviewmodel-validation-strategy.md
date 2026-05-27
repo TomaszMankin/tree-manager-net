@@ -17,7 +17,6 @@ Tab 1 (Dane osoby) must handle partial person records. Name fields (FirstName, L
 - No `[Required]` or `[CustomValidation]` on any field. All fields are optional.
 - `Sex` defaults to `Sex.Unknown` — a valid state meaning "sex not known". All three enum values (Unknown, Male, Female) are valid on the VM.
 - Empty `FirstName` / `LastName` are valid on the VM. `PersonViewModelMapper.ToMeFile()` coerces empty strings to `"(nieznane)"` at persist time, keeping the JSON consistent with py-tree-manager convention.
-- Mapper split by extended type: `MeFileMapper` (`ToViewModel(this MeFile)`) and `PersonViewModelMapper` (`ToMeFile(this PersonViewModel)`).
 
 ---
 
