@@ -8,7 +8,7 @@ public static class DatesTabViewModelMapper
 {
     public static DatesTabViewModel ToDatesTabViewModel(this MeFile meFile)
     {
-        if (meFile == null) throw new ArgumentNullException(nameof(meFile));
+        ArgumentNullException.ThrowIfNull(meFile, nameof(meFile));
 
         var vm = new DatesTabViewModel();
 
@@ -32,11 +32,11 @@ public static class DatesTabViewModelMapper
         return vm;
     }
 
-    public static MeFile WithDatesFrom(this MeFile baseFile, DatesTabViewModel vm)
+    public static MeFile ToMeFile(this DatesTabViewModel vm, MeFile existing = null)
     {
-        if (baseFile == null) throw new ArgumentNullException(nameof(baseFile));
-        if (vm == null) throw new ArgumentNullException(nameof(vm));
+        ArgumentNullException.ThrowIfNull(vm, nameof(vm));
 
+        var baseFile = existing ?? new MeFile();
         var birth = new PartialDate(vm.BirthDate.Day, vm.BirthDate.Month, vm.BirthDate.Year);
         var death = vm.IsDeceased
             ? new PartialDate(vm.DeathDate.Day, vm.DeathDate.Month, vm.DeathDate.Year)

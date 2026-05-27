@@ -10,6 +10,8 @@ public class PartialDateTests
     [InlineData("12|03|1947", 12, 3, 1947)]
     [InlineData("XX|03|1947", null, 3, 1947)]
     [InlineData("XX|XX|XXXX", null, null, null)]
+    [InlineData("12|03|XXXX", 12, 3, null)]
+    [InlineData("12|XX|1947", 12, null, 1947)]
     public void ToPartialDate_ReturnsExpectedDate_WhenInputIsValid(
         string input, int? expectedDay, int? expectedMonth, int? expectedYear)
     {
@@ -21,6 +23,21 @@ public class PartialDateTests
         Assert.Equal(expectedDay, result.Day);
         Assert.Equal(expectedMonth, result.Month);
         Assert.Equal(expectedYear, result.Year);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("12|03|XX47")]
+    [InlineData("12|03|19X7")]
+    [InlineData("12|03|194X")]
+    public void ToPartialDate_TreatsPartiallyKnownYear_AsUnknown_WhenRoundTripped(string input)
+    {
+        //Arrange
+        //Act
+        var result = input.ToPartialDate().ToSerializedString();
+
+        //Assert
+        Assert.Equal("12|03|XXXX", result);
     }
 
     [Theory]

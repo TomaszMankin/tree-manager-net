@@ -1,3 +1,4 @@
+using System;
 using TreeManager.App.Mappers;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
@@ -7,36 +8,40 @@ namespace TreeManager.App.L0.Mappers;
 
 public class DatesTabViewModelMapperTests
 {
-    [Fact]
+    [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ToDatesTabViewModel_MapsFullBirthDate_WhenDatesOfBirthIsFullDate()
+    [InlineData("12|03|1947", 12, 3, 1947)]
+    [InlineData("XX|03|1947", null, 3, 1947)]
+    [InlineData("XX|XX|XXXX", null, null, null)]
+    public void ToDatesTabViewModel_MapsBirthDateComponents_WhenDatesOfBirthIsProvided(
+        string input, int? expectedDay, int? expectedMonth, int? expectedYear)
     {
         //Arrange
-        var meFile = new MeFile { DatesOfBirth = "12|03|1947" };
+        var meFile = new MeFile { DatesOfBirth = input };
 
         //Act
         var vm = meFile.ToDatesTabViewModel();
 
         //Assert
-        Assert.Equal(12, vm.BirthDate.Day);
-        Assert.Equal(3, vm.BirthDate.Month);
-        Assert.Equal(1947, vm.BirthDate.Year);
+        Assert.Equal(expectedDay, vm.BirthDate.Day);
+        Assert.Equal(expectedMonth, vm.BirthDate.Month);
+        Assert.Equal(expectedYear, vm.BirthDate.Year);
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ToDatesTabViewModel_MapsPartialBirthDate_WhenDayIsUnknown()
+    public void ToDatesTabViewModel_SetsBirthDateToAllUnknown_WhenDatesOfBirthIsEmpty()
     {
         //Arrange
-        var meFile = new MeFile { DatesOfBirth = "XX|03|1947" };
+        var meFile = new MeFile { DatesOfBirth = string.Empty };
 
         //Act
         var vm = meFile.ToDatesTabViewModel();
 
         //Assert
         Assert.Null(vm.BirthDate.Day);
-        Assert.Equal(3, vm.BirthDate.Month);
-        Assert.Equal(1947, vm.BirthDate.Year);
+        Assert.Null(vm.BirthDate.Month);
+        Assert.Null(vm.BirthDate.Year);
     }
 
     [Fact]
@@ -69,17 +74,23 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void WithDatesFrom_SerializesFullBirthDate_WhenAllComponentsKnown()
+    public void ToDatesTabViewModel_ThrowsArgumentNullException_WhenMeFileIsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => ((MeFile)null).ToDatesTabViewModel());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_SerializesFullBirthDate_WhenAllComponentsKnown()
     {
         //Arrange
         var vm = new DatesTabViewModel();
         vm.BirthDate.Day = 12;
         vm.BirthDate.Month = 3;
         vm.BirthDate.Year = 1947;
-        var meFile = new MeFile();
 
         //Act
-        var result = meFile.WithDatesFrom(vm);
+        var result = vm.ToMeFile();
 
         //Assert
         Assert.Equal("12|03|1947", result.DatesOfBirth);
@@ -87,14 +98,13 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void WithDatesFrom_SerializesEmptyDatesOfDeath_WhenIsDeceasedIsFalse()
+    public void ToMeFile_SerializesEmptyDatesOfDeath_WhenIsDeceasedIsFalse()
     {
         //Arrange
         var vm = new DatesTabViewModel { IsDeceased = false };
-        var meFile = new MeFile();
 
         //Act
-        var result = meFile.WithDatesFrom(vm);
+        var result = vm.ToMeFile();
 
         //Assert
         Assert.Equal(string.Empty, result.DatesOfDeath);
@@ -102,7 +112,7 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void WithDatesFrom_SerializesDeathDate_WhenIsDeceasedIsTrue()
+    public void ToMeFile_SerializesDeathDate_WhenIsDeceasedIsTrue()
     {
         //Arrange
         var vm = new DatesTabViewModel();
@@ -110,10 +120,9 @@ public class DatesTabViewModelMapperTests
         vm.DeathDate.Day = null;
         vm.DeathDate.Month = null;
         vm.DeathDate.Year = null;
-        var meFile = new MeFile();
 
         //Act
-        var result = meFile.WithDatesFrom(vm);
+        var result = vm.ToMeFile();
 
         //Assert
         Assert.Equal("XX|XX|XXXX", result.DatesOfDeath);
@@ -121,27 +130,45 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void WithDatesFrom_ThrowsArgumentNullException_WhenBaseFileIsNull()
+    public void ToMeFile_IgnoresDeathDateValues_WhenIsDeceasedToggledBackToFalse()
     {
         //Arrange
         var vm = new DatesTabViewModel();
+        vm.IsDeceased = true;
+        vm.DeathDate.Day = 5;
+        vm.DeathDate.Month = 6;
+        vm.DeathDate.Year = 2020;
+        vm.IsDeceased = false; // clears death dates via VM and marks not deceased
 
         //Act
-        var ex = Record.Exception(() => ((MeFile)null).WithDatesFrom(vm));
+        var result = vm.ToMeFile();
 
         //Assert
-        Assert.IsType<ArgumentNullException>(ex);
+        Assert.Equal(string.Empty, result.DatesOfDeath);
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ToDatesTabViewModel_ThrowsArgumentNullException_WhenMeFileIsNull()
+    public void ToMeFile_PreservesExistingFields_WhenExistingMeFileIsProvided()
     {
         //Arrange
+        var existing = new MeFile { FirstName = "Jan", LastName = "Kowalski" };
+        var vm = new DatesTabViewModel();
+        vm.BirthDate.Year = 1947;
+
         //Act
-        var ex = Record.Exception(() => ((MeFile)null).ToDatesTabViewModel());
+        var result = vm.ToMeFile(existing);
 
         //Assert
-        Assert.IsType<ArgumentNullException>(ex);
+        Assert.Equal("Jan", result.FirstName);
+        Assert.Equal("Kowalski", result.LastName);
+        Assert.Equal("XX|XX|1947", result.DatesOfBirth);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_ThrowsArgumentNullException_WhenViewModelIsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => ((DatesTabViewModel)null).ToMeFile());
     }
 }

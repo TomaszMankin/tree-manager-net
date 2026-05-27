@@ -5,12 +5,67 @@ namespace TreeManager.App.L0.ViewModels;
 
 public class OptionalDatePickerViewModelTests
 {
-    [Fact]
+    [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void DayOptions_ShrinksToTwentyEight_WhenMonthChangedToFebruary()
+    [InlineData(1, 32)]   // Jan: null + 31
+    [InlineData(2, 29)]   // Feb (no year → no leap year): null + 28
+    [InlineData(3, 32)]   // Mar: null + 31
+    [InlineData(4, 31)]   // Apr: null + 30
+    [InlineData(5, 32)]   // May: null + 31
+    [InlineData(6, 31)]   // Jun: null + 30
+    [InlineData(7, 32)]   // Jul: null + 31
+    [InlineData(8, 32)]   // Aug: null + 31
+    [InlineData(9, 31)]   // Sep: null + 30
+    [InlineData(10, 32)]  // Oct: null + 31
+    [InlineData(11, 31)]  // Nov: null + 30
+    [InlineData(12, 32)]  // Dec: null + 31
+    public void DayOptions_HasExpectedCount_WhenMonthIsSet(int month, int expectedCount)
     {
         //Arrange
-        var vm = new OptionalDatePickerViewModel { Month = 1, Day = 30 };
+        var vm = new OptionalDatePickerViewModel { Month = month };
+
+        //Act
+        var count = vm.DayOptions.Count;
+
+        //Assert
+        Assert.Equal(expectedCount, count);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DayOptions_ContainsThirty_WhenMonthIsFebruaryAndYearIsLeapYear()
+    {
+        //Arrange
+        var vm = new OptionalDatePickerViewModel { Month = 2, Year = 2024 }; // 2024 is a leap year
+
+        //Act
+        var count = vm.DayOptions.Count;
+
+        //Assert
+        Assert.Equal(30, count); // null + 1..29
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DayOptions_ShrinksBackToTwentyNine_WhenYearChangedFromLeapToNonLeap()
+    {
+        //Arrange
+        var vm = new OptionalDatePickerViewModel { Month = 2, Year = 2024, Day = 29 }; // Feb 29 valid in 2024
+
+        //Act
+        vm.Year = 2023; // non-leap year
+
+        //Assert
+        Assert.Equal(29, vm.DayOptions.Count); // null + 1..28
+        Assert.Null(vm.Day);                   // day 29 no longer valid, reset
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DayOptions_ShrinksToTwentyNine_WhenMonthChangedToFebruary()
+    {
+        //Arrange
+        var vm = new OptionalDatePickerViewModel { Month = 1, Day = 30 }; // no year → non-leap
 
         //Act
         vm.Month = 2;
@@ -18,34 +73,6 @@ public class OptionalDatePickerViewModelTests
         //Assert
         Assert.Equal(29, vm.DayOptions.Count); // null + 1..28
         Assert.Null(vm.Day);
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void DayOptions_ContainsThirtyTwo_WhenMonthIsJanuary()
-    {
-        //Arrange
-        var vm = new OptionalDatePickerViewModel { Month = 1 };
-
-        //Act
-        var count = vm.DayOptions.Count;
-
-        //Assert
-        Assert.Equal(32, count); // null + 1..31
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void DayOptions_ContainsThirtyOne_WhenMonthIsApril()
-    {
-        //Arrange
-        var vm = new OptionalDatePickerViewModel { Month = 4 };
-
-        //Act
-        var count = vm.DayOptions.Count;
-
-        //Assert
-        Assert.Equal(31, count); // null + 1..30
     }
 
     [Fact]
