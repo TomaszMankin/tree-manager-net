@@ -40,9 +40,9 @@ public class DatesTabViewModelTests
         //Arrange
         var vm = new DatesTabViewModel();
         vm.IsDeceased = true;
-        vm.DeathDate.Day = 5;
-        vm.DeathDate.Month = 6;
-        vm.DeathDate.Year = 2000;
+        vm.DeathDate.Day = "5";
+        vm.DeathDate.Month = "6";
+        vm.DeathDate.Year = "2000";
 
         //Act
         vm.IsDeceased = false;

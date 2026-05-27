@@ -5,7 +5,7 @@ public static class StringExtensions
     /// <summary>Parses wire format "DD|MM|YYYY" (with "--" wildcards) into a <see cref="PartialDate"/>. Returns <see langword="default"/> on malformed input. Throws <see cref="ArgumentNullException"/> when called on null.</summary>
     public static PartialDate ParsePartialDate(this string input)
     {
-        ArgumentNullException.ThrowIfNull(input, nameof(input));
+        ArgumentNullException.ThrowIfNull(input);
 
         if (input.Length == 0)
         {

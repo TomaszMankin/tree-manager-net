@@ -1,35 +1,51 @@
-# ADR-005 — OptionalDatePickerViewModel: int? with null for unknown
+# ADR-005 — OptionalDatePickerViewModel: string fields with validation
 
 **Status:** Accepted
-**Date:** 2026-05-27
+**Date:** 2026-05-27 (revised 2026-05-28)
 
 ---
 
 ## Problem
 
-PartialDate wire format uses "--" sentinel strings for unknown day/month/year. The ViewModel layer needs a representation for user interaction — store the sentinel string or use typed nullability?
+### Why partial dates are required
+
+Family tree archaeology deals with sources of varying completeness. For any given person, date knowledge may be:
+
+- **Complete** — "born 12 March 1947" (full records, living relatives)
+- **Year only** — "born 1847" (parish register lists year, no day/month)
+- **Partial year** — "born in the 1840s" → year stored as "184-"
+- **Day + month, no year** — name-day records, no birth year established
+- **Unknown entirely** — person confirmed to exist from other records but no date found
+- Any other combination of the above
+
+This is not an edge case — it is the normal state for most entries beyond two or three generations back. The data model must represent each date component independently as known or unknown, and years must be storable as partial strings (e.g., "184-", "18--") not just as complete integers.
+
+### How to represent this in the ViewModel
+
+The ViewModel layer needs a representation for user interaction that supports the full range of partial-date knowledge above.
 
 ---
 
 ## Decision
 
-- `OptionalDatePickerViewModel` stores `int? Day`, `int? Month`, `int? Year` — null means unknown.
-- "--" sentinel exists only in serialized wire format.
-- VM never holds "--" strings — conversion at the mapper boundary only.
-- Day options list recalculates when Month changes; selected day resets to null if it exceeds the new month's maximum.
+- All three date components (day, month, year) are independently optional and entered as free text.
+- Year allows partial values ("184-", "18--") not expressible as integers.
+- Invalid input is shown visually; the user is not blocked from saving work-in-progress.
 - `IsDeceased` derived from `DatesOfDeath` being non-empty — no flag added to `MeFile`.
-- `DeathDate.IsEnabled` defaults to false (mirrors `IsDeceased` default of false); enabled only when `IsDeceased` is set true.
+- `DeathDate` enabled only when `IsDeceased` is true.
 
 ---
 
 ## Rejected
 
-- **string? with "--" in VM** — leaks wire format into presentation layer; complicates binding and ComboBox item matching.
-- **Explicit `IsDeceased` flag in MeFile** — py-tree-manager schema has no such field; derive from DatesOfDeath presence instead.
+- **Dropdowns with integer fields** — cannot represent partial years ("184-"); forces binary known/unknown on year; no path to expressing decade-level knowledge.
+- **Explicit `IsDeceased` flag in `MeFile`** — `MeFile` schema has no such field; derive from `DatesOfDeath` presence instead.
 
 ---
 
 ## Consequences
 
-+ VM is cleanly typed — ComboBox binds int? directly, no string parsing in view.
-+ `"--"` coercion isolated to `PartialDateExtensions.ToSerializedString()` / `ToPartialDate()`.
++ Each date component independently unknown — correct model for historical records.
++ Partial years ("184-", "18--") expressible and preserved through the full data round-trip.
++ Validation is advisory, not blocking — preserves ability to save work-in-progress.
+- Free-text removes automatic day-range clamping; user sees validation feedback instead of prevention.

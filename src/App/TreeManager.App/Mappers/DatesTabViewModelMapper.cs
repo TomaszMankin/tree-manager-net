@@ -8,25 +8,25 @@ public static class DatesTabViewModelMapper
 {
     public static DatesTabViewModel ToDatesTabViewModel(this MeFile meFile)
     {
-        ArgumentNullException.ThrowIfNull(meFile, nameof(meFile));
+        ArgumentNullException.ThrowIfNull(meFile);
 
         var vm = new DatesTabViewModel();
 
         if (!string.IsNullOrEmpty(meFile.DatesOfBirth))
         {
             var birth = meFile.DatesOfBirth.ToPartialDate();
-            vm.BirthDate.Day = birth.Day;
-            vm.BirthDate.Month = birth.Month;
-            vm.BirthDate.Year = int.TryParse(birth.Year, out var birthYear) ? birthYear : (int?)null;
+            vm.BirthDate.Day = birth.Day?.ToString();
+            vm.BirthDate.Month = birth.Month?.ToString();
+            vm.BirthDate.Year = birth.Year;
         }
 
         if (!string.IsNullOrEmpty(meFile.DatesOfDeath))
         {
             vm.IsDeceased = true;
             var death = meFile.DatesOfDeath.ToPartialDate();
-            vm.DeathDate.Day = death.Day;
-            vm.DeathDate.Month = death.Month;
-            vm.DeathDate.Year = int.TryParse(death.Year, out var deathYear) ? deathYear : (int?)null;
+            vm.DeathDate.Day = death.Day?.ToString();
+            vm.DeathDate.Month = death.Month?.ToString();
+            vm.DeathDate.Year = death.Year;
         }
 
         return vm;
@@ -34,12 +34,19 @@ public static class DatesTabViewModelMapper
 
     public static MeFile ToMeFile(this DatesTabViewModel vm, MeFile existing = null)
     {
-        ArgumentNullException.ThrowIfNull(vm, nameof(vm));
+        ArgumentNullException.ThrowIfNull(vm);
 
         var baseFile = existing ?? new MeFile();
-        var birth = new PartialDate(vm.BirthDate.Day, vm.BirthDate.Month, vm.BirthDate.Year?.ToString("D4"));
+        var birth = new PartialDate(
+            int.TryParse(vm.BirthDate.Day, out var bd) ? bd : (int?)null,
+            int.TryParse(vm.BirthDate.Month, out var bm) ? bm : (int?)null,
+            vm.BirthDate.Year);
+
         var death = vm.IsDeceased
-            ? new PartialDate(vm.DeathDate.Day, vm.DeathDate.Month, vm.DeathDate.Year?.ToString("D4"))
+            ? new PartialDate(
+                int.TryParse(vm.DeathDate.Day, out var dd) ? dd : (int?)null,
+                int.TryParse(vm.DeathDate.Month, out var dm) ? dm : (int?)null,
+                vm.DeathDate.Year)
             : (PartialDate?)null;
 
         return baseFile with

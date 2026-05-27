@@ -18,7 +18,7 @@ public sealed class MeFileProcessor : IMeFileProcessor
 
     public IEnumerable<string> ScanMeFiles(string rootPath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath, nameof(rootPath));
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
 
         var peopleListPath = Path.Combine(rootPath, PeopleListFolderName);
         if (!_fs.DirectoryExists(peopleListPath))
@@ -38,7 +38,7 @@ public sealed class MeFileProcessor : IMeFileProcessor
 
     public MeFile ReadMeFile(string meFilePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(meFilePath, nameof(meFilePath));
+        ArgumentException.ThrowIfNullOrWhiteSpace(meFilePath);
 
         if (!_fs.FileExists(meFilePath))
         {
@@ -52,8 +52,8 @@ public sealed class MeFileProcessor : IMeFileProcessor
 
     public void WriteMeFile(string meFilePath, MeFile content)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(meFilePath, nameof(meFilePath));
-        ArgumentNullException.ThrowIfNull(content, nameof(content));
+        ArgumentException.ThrowIfNullOrWhiteSpace(meFilePath);
+        ArgumentNullException.ThrowIfNull(content);
 
         var serialized = JsonSerializer.Serialize(content, MeFile.DefaultOptions);
         _fs.WriteAllText(meFilePath, serialized);

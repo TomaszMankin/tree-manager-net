@@ -10,7 +10,7 @@ public static class PartialDateExtensions
     /// <summary>Parses wire format "DD|MM|YYYY" (with "--" wildcards) back to a <see cref="PartialDate"/>.</summary>
     public static PartialDate ToPartialDate(this string input)
     {
-        ArgumentNullException.ThrowIfNull(input, nameof(input));
+        ArgumentNullException.ThrowIfNull(input);
 
         var chunks = input.Split(SerializableSeparator);
         if (chunks.Length != 3)

@@ -10,11 +10,11 @@ public class DatesTabViewModelMapperTests
 {
     [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    [InlineData("12|03|1947", 12, 3, 1947)]
-    [InlineData("--|03|1947", null, 3, 1947)]
+    [InlineData("12|03|1947", "12", "3", "1947")]
+    [InlineData("--|03|1947", null, "3", "1947")]
     [InlineData("--|--|----", null, null, null)]
     public void ToDatesTabViewModel_MapsBirthDateComponents_WhenDatesOfBirthIsProvided(
-        string input, int? expectedDay, int? expectedMonth, int? expectedYear)
+        string input, string expectedDay, string expectedMonth, string expectedYear)
     {
         //Arrange
         var meFile = new MeFile { DatesOfBirth = input };
@@ -99,9 +99,9 @@ public class DatesTabViewModelMapperTests
     {
         //Arrange
         var vm = new DatesTabViewModel();
-        vm.BirthDate.Day = 12;
-        vm.BirthDate.Month = 3;
-        vm.BirthDate.Year = 1947;
+        vm.BirthDate.Day = "12";
+        vm.BirthDate.Month = "3";
+        vm.BirthDate.Year = "1947";
 
         //Act
         var result = vm.ToMeFile();
@@ -149,10 +149,10 @@ public class DatesTabViewModelMapperTests
         //Arrange
         var vm = new DatesTabViewModel();
         vm.IsDeceased = true;
-        vm.DeathDate.Day = 5;
-        vm.DeathDate.Month = 6;
-        vm.DeathDate.Year = 2020;
-        vm.IsDeceased = false; // clears death dates via VM and marks not deceased
+        vm.DeathDate.Day = "5";
+        vm.DeathDate.Month = "6";
+        vm.DeathDate.Year = "2020";
+        vm.IsDeceased = false;
 
         //Act
         var result = vm.ToMeFile();
@@ -168,7 +168,7 @@ public class DatesTabViewModelMapperTests
         //Arrange
         var existing = new MeFile { FirstName = "Jan", LastName = "Kowalski" };
         var vm = new DatesTabViewModel();
-        vm.BirthDate.Year = 1947;
+        vm.BirthDate.Year = "1947";
 
         //Act
         var result = vm.ToMeFile(existing);
