@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using AutoBogus;
 using TreeManager.App.Mappers;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
@@ -9,47 +9,31 @@ namespace TreeManager.App.L0.Mappers;
 
 public class PersonViewModelMapperTests
 {
-    private const string SampleFirstName = "Jan";
-    private const string SampleLastName = "Kowalski";
-    private const string SamplePersonName = "Jan Kowalski";
-    private const string SampleLocation = @"C:\fake\tree\Kowalski_Jan";
-    private static readonly Guid SampleGuid = Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb");
-
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void ToMeFile_CopiesAllNameFields_WhenSourceIsValid()
     {
         //Arrange
-        var vm = new PersonViewModel
-        {
-            UniqueIdentifier = SampleGuid,
-            PersonName = SamplePersonName,
-            Location = SampleLocation,
-            FirstName = SampleFirstName,
-            OtherFirstNames = "Adam",
-            LastName = SampleLastName,
-            OtherLastNames = "Kowalsky",
-            MaidenName = "Nowak",
-            OtherMaidenNames = string.Empty,
-            HasMaidenName = true,
-            Sex = Sex.Female,
-        };
+        var vm = new AutoFaker<PersonViewModel>()
+            .RuleFor(x => x.FirstName, f => f.Name.FirstName())
+            .RuleFor(x => x.LastName, f => f.Name.LastName())
+            .Generate();
 
         //Act
         var result = vm.ToMeFile();
 
         //Assert
-        Assert.Equal(SampleGuid, result.UniqueIdentifier);
-        Assert.Equal(SamplePersonName, result.PersonName);
-        Assert.Equal(SampleLocation, result.Location);
-        Assert.Equal(SampleFirstName, result.FirstName);
-        Assert.Equal("Adam", result.OtherFirstNames);
-        Assert.Equal(SampleLastName, result.LastName);
-        Assert.Equal("Kowalsky", result.OtherLastNames);
-        Assert.Equal("Nowak", result.MaidenName);
-        Assert.Equal(string.Empty, result.OtherMaidenNames);
-        Assert.True(result.HasMaidenName);
-        Assert.Equal(Sex.Female, result.Sex);
+        Assert.Equal(vm.UniqueIdentifier, result.UniqueIdentifier);
+        Assert.Equal(vm.PersonName, result.PersonName);
+        Assert.Equal(vm.Location, result.Location);
+        Assert.Equal(vm.FirstName, result.FirstName);
+        Assert.Equal(vm.OtherFirstNames, result.OtherFirstNames);
+        Assert.Equal(vm.LastName, result.LastName);
+        Assert.Equal(vm.OtherLastNames, result.OtherLastNames);
+        Assert.Equal(vm.MaidenName, result.MaidenName);
+        Assert.Equal(vm.OtherMaidenNames, result.OtherMaidenNames);
+        Assert.Equal(vm.HasMaidenName, result.HasMaidenName);
+        Assert.Equal(vm.Sex, result.Sex);
     }
 
     [Fact]
@@ -57,12 +41,12 @@ public class PersonViewModelMapperTests
     public void ToMeFile_PreservesRelationshipLists_WhenExistingProvided()
     {
         //Arrange
-        var existing = BuildSampleMeFile();
+        var existing = AutoFaker.Generate<MeFile>();
         var vm = new PersonViewModel
         {
-            UniqueIdentifier = SampleGuid,
+            UniqueIdentifier = existing.UniqueIdentifier,
             FirstName = "Marek",
-            LastName = SampleLastName,
+            LastName = "Kowalski",
             Sex = Sex.Male,
         };
 
@@ -123,7 +107,7 @@ public class PersonViewModelMapperTests
     public void ToMeFile_PreservesRelationshipsAndUpdatesFields_WhenVmModifiedAfterLoad()
     {
         //Arrange
-        var original = BuildSampleMeFile();
+        var original = AutoFaker.Generate<MeFile>();
         var vm = original.ToViewModel();
         vm.FirstName = "Marek";
 
@@ -134,32 +118,6 @@ public class PersonViewModelMapperTests
         Assert.Equal("Marek", result.FirstName);
         Assert.Equal(original.Spouse, result.Spouse);
         Assert.Equal(original.Notes, result.Notes);
-        Assert.Equal(SampleGuid, result.UniqueIdentifier);
+        Assert.Equal(original.UniqueIdentifier, result.UniqueIdentifier);
     }
-
-    private static MeFile BuildSampleMeFile() => new()
-    {
-        UniqueIdentifier = SampleGuid,
-        PersonName = SamplePersonName,
-        Location = SampleLocation,
-        FirstName = SampleFirstName,
-        OtherFirstNames = "Adam",
-        LastName = SampleLastName,
-        OtherLastNames = "Kowalsky",
-        MaidenName = "Nowak",
-        OtherMaidenNames = string.Empty,
-        HasMaidenName = true,
-        Sex = Sex.Female,
-        Spouse = new List<string> { "Anna Nowak" },
-        SpouseId = new List<Guid> { Guid.Parse("11111111-1111-1111-1111-111111111111") },
-        Children = new List<string> { "Adam Kowalski" },
-        ChildrenId = new List<Guid> { Guid.Parse("22222222-2222-2222-2222-222222222222") },
-        Parents = new List<string> { "Piotr Kowalski" },
-        ParentsId = new List<Guid> { Guid.Parse("33333333-3333-3333-3333-333333333333") },
-        Siblings = new List<string> { "Maria Kowalska" },
-        SiblingsId = new List<Guid> { Guid.Parse("44444444-4444-4444-4444-444444444444") },
-        Notes = "Test notes",
-        DatesOfBirth = "15|03|1950",
-        DatesOfDeath = string.Empty,
-    };
 }

@@ -34,4 +34,3 @@ Tab 1 (Dane osoby) must handle partial person records. Name fields (FirstName, L
 
 + PersonViewModel is a simple data bag — no annotation overhead, easy to construct in tests.
 + `"(nieznane)"` sentinel written by mapper means JSON files stay consistent with py-tree-manager output.
-- No live validation feedback in Tab 1 this sprint; sprint-08 will add save-time checks if product requires them.
