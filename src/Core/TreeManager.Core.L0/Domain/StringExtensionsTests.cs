@@ -8,8 +8,8 @@ public class StringExtensionsTests
     [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     [InlineData("12|03|1947", 12, 3, "1947")]
-    [InlineData("XX|03|1947", null, 3, "1947")]
-    [InlineData("XX|XX|XXXX", null, null, null)]
+    [InlineData("--|03|1947", null, 3, "1947")]
+    [InlineData("--|--|----", null, null, null)]
     [InlineData("01|02|2020", 1, 2, "2020")]
     public void ParsePartialDate_ReturnsPartialDate_WhenSerializedStringIsValid(
         string input, int? day, int? month, string year)

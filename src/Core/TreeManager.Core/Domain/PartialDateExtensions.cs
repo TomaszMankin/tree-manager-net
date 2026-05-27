@@ -1,13 +1,13 @@
 namespace TreeManager.Core.Domain;
 
-/// <summary>Format helpers for <see cref="PartialDate"/>. Wire format "DD|MM|YYYY" with "XX" wildcards for unknown components.</summary>
+/// <summary>Format helpers for <see cref="PartialDate"/>. Wire format "DD|MM|YYYY" with "--" wildcards for unknown components.</summary>
 public static class PartialDateExtensions
 {
-    private const char Wildcard = 'X';
+    private const char Wildcard = '-';
     private const char SerializableSeparator = '|';
     private const char DateSeparator = '/';
 
-    /// <summary>Parses wire format "DD|MM|YYYY" (with "XX" wildcards) back to a <see cref="PartialDate"/>.</summary>
+    /// <summary>Parses wire format "DD|MM|YYYY" (with "--" wildcards) back to a <see cref="PartialDate"/>.</summary>
     public static PartialDate ToPartialDate(this string input)
     {
         ArgumentNullException.ThrowIfNull(input, nameof(input));
@@ -26,7 +26,7 @@ public static class PartialDateExtensions
         return new PartialDate(day, month, year);
     }
 
-    /// <summary>Formats to wire format "DD|MM|YYYY" with "XX" wildcards.</summary>
+    /// <summary>Formats to wire format "DD|MM|YYYY" with "--" wildcards.</summary>
     public static string ToSerializedString(this PartialDate date)
     {
         var day = FormatIntField(date.Day, 2);
@@ -35,7 +35,7 @@ public static class PartialDateExtensions
         return $"{day}{SerializableSeparator}{month}{SerializableSeparator}{year}";
     }
 
-    /// <summary>Formats to display format "DD/MM/YYYY" with "XX" wildcards.</summary>
+    /// <summary>Formats to display format "DD/MM/YYYY" with "--" wildcards.</summary>
     public static string ToDateString(this PartialDate date)
     {
         var day = FormatIntField(date.Day, 2);

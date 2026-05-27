@@ -11,8 +11,8 @@ public class DatesTabViewModelMapperTests
     [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     [InlineData("12|03|1947", 12, 3, 1947)]
-    [InlineData("XX|03|1947", null, 3, 1947)]
-    [InlineData("XX|XX|XXXX", null, null, null)]
+    [InlineData("--|03|1947", null, 3, 1947)]
+    [InlineData("--|--|----", null, null, null)]
     public void ToDatesTabViewModel_MapsBirthDateComponents_WhenDatesOfBirthIsProvided(
         string input, int? expectedDay, int? expectedMonth, int? expectedYear)
     {
@@ -49,7 +49,7 @@ public class DatesTabViewModelMapperTests
     public void ToDatesTabViewModel_SetsIsDeceased_WhenDatesOfDeathIsNonEmpty()
     {
         //Arrange
-        var meFile = new MeFile { DatesOfDeath = "XX|XX|XXXX" };
+        var meFile = new MeFile { DatesOfDeath = "--|--|----" };
 
         //Act
         var vm = meFile.ToDatesTabViewModel();
@@ -139,7 +139,7 @@ public class DatesTabViewModelMapperTests
         var result = vm.ToMeFile();
 
         //Assert
-        Assert.Equal("XX|XX|XXXX", result.DatesOfDeath);
+        Assert.Equal("--|--|----", result.DatesOfDeath);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class DatesTabViewModelMapperTests
         //Assert
         Assert.Equal("Jan", result.FirstName);
         Assert.Equal("Kowalski", result.LastName);
-        Assert.Equal("XX|XX|1947", result.DatesOfBirth);
+        Assert.Equal("--|--|1947", result.DatesOfBirth);
     }
 
     [Fact]
