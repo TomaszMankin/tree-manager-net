@@ -74,6 +74,20 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToDatesTabViewModel_DoesNotSetIsDeceased_WhenDatesOfDeathIsNull()
+    {
+        //Arrange
+        var meFile = new MeFile { DatesOfDeath = null };
+
+        //Act
+        var vm = meFile.ToDatesTabViewModel();
+
+        //Assert
+        Assert.False(vm.IsDeceased);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void ToDatesTabViewModel_ThrowsArgumentNullException_WhenMeFileIsNull()
     {
         Assert.Throws<ArgumentNullException>(() => ((MeFile)null).ToDatesTabViewModel());

@@ -10,40 +10,41 @@ public static class PartialDateExtensions
     /// <summary>Parses wire format "DD|MM|YYYY" (with "XX" wildcards) back to a <see cref="PartialDate"/>.</summary>
     public static PartialDate ToPartialDate(this string input)
     {
-        if (input == null) throw new ArgumentNullException(nameof(input));
+        ArgumentNullException.ThrowIfNull(input, nameof(input));
 
         var chunks = input.Split(SerializableSeparator);
         if (chunks.Length != 3)
-            return default;
-
-        var convertedValues = new System.Collections.Generic.List<int?>();
-        foreach (var chunk in chunks)
         {
-            convertedValues.Add(int.TryParse(chunk, out var result) ? result : (int?)null);
+            return default;
         }
 
-        return new PartialDate(convertedValues[0], convertedValues[1], convertedValues[2]);
+        var day = int.TryParse(chunks[0], out var d) ? d : (int?)null;
+        var month = int.TryParse(chunks[1], out var m) ? m : (int?)null;
+        var yearChunk = chunks[2];
+        var year = yearChunk.All(c => c == Wildcard) ? null : yearChunk;
+
+        return new PartialDate(day, month, year);
     }
 
     /// <summary>Formats to wire format "DD|MM|YYYY" with "XX" wildcards.</summary>
     public static string ToSerializedString(this PartialDate date)
     {
-        var day = ToFormattedValue(date.Day, 2);
-        var month = ToFormattedValue(date.Month, 2);
-        var year = ToFormattedValue(date.Year, 4);
+        var day = FormatIntField(date.Day, 2);
+        var month = FormatIntField(date.Month, 2);
+        var year = date.Year ?? new string(Wildcard, 4);
         return $"{day}{SerializableSeparator}{month}{SerializableSeparator}{year}";
     }
 
     /// <summary>Formats to display format "DD/MM/YYYY" with "XX" wildcards.</summary>
     public static string ToDateString(this PartialDate date)
     {
-        var day = ToFormattedValue(date.Day, 2);
-        var month = ToFormattedValue(date.Month, 2);
-        var year = ToFormattedValue(date.Year, 4);
+        var day = FormatIntField(date.Day, 2);
+        var month = FormatIntField(date.Month, 2);
+        var year = date.Year ?? new string(Wildcard, 4);
         return $"{day}{DateSeparator}{month}{DateSeparator}{year}";
     }
 
-    private static string ToFormattedValue(int? value, int pad)
+    private static string FormatIntField(int? value, int pad)
     {
         return value.HasValue
             ? value.Value.ToString().PadLeft(pad, '0')

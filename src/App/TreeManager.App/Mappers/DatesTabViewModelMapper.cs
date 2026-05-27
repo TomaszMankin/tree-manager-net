@@ -17,7 +17,7 @@ public static class DatesTabViewModelMapper
             var birth = meFile.DatesOfBirth.ToPartialDate();
             vm.BirthDate.Day = birth.Day;
             vm.BirthDate.Month = birth.Month;
-            vm.BirthDate.Year = birth.Year;
+            vm.BirthDate.Year = int.TryParse(birth.Year, out var birthYear) ? birthYear : (int?)null;
         }
 
         if (!string.IsNullOrEmpty(meFile.DatesOfDeath))
@@ -26,7 +26,7 @@ public static class DatesTabViewModelMapper
             var death = meFile.DatesOfDeath.ToPartialDate();
             vm.DeathDate.Day = death.Day;
             vm.DeathDate.Month = death.Month;
-            vm.DeathDate.Year = death.Year;
+            vm.DeathDate.Year = int.TryParse(death.Year, out var deathYear) ? deathYear : (int?)null;
         }
 
         return vm;
@@ -37,9 +37,9 @@ public static class DatesTabViewModelMapper
         ArgumentNullException.ThrowIfNull(vm, nameof(vm));
 
         var baseFile = existing ?? new MeFile();
-        var birth = new PartialDate(vm.BirthDate.Day, vm.BirthDate.Month, vm.BirthDate.Year);
+        var birth = new PartialDate(vm.BirthDate.Day, vm.BirthDate.Month, vm.BirthDate.Year?.ToString("D4"));
         var death = vm.IsDeceased
-            ? new PartialDate(vm.DeathDate.Day, vm.DeathDate.Month, vm.DeathDate.Year)
+            ? new PartialDate(vm.DeathDate.Day, vm.DeathDate.Month, vm.DeathDate.Year?.ToString("D4"))
             : (PartialDate?)null;
 
         return baseFile with

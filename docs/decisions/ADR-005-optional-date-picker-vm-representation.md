@@ -14,7 +14,7 @@ PartialDate wire format uses "XX" sentinel strings for unknown day/month/year. T
 ## Decision
 
 - `OptionalDatePickerViewModel` stores `int? Day`, `int? Month`, `int? Year` — null means unknown.
-- "XX" sentinel exists only in serialized wire format (`PartialDate.ToSerializedString()`).
+- "XX" sentinel exists only in serialized wire format.
 - VM never holds "XX" strings — conversion at the mapper boundary only.
 - Day options list recalculates when Month changes; selected day resets to null if it exceeds the new month's maximum.
 - `IsDeceased` derived from `DatesOfDeath` being non-empty — no flag added to `MeFile`.

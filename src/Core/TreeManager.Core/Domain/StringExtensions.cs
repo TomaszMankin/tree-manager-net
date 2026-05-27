@@ -7,17 +7,22 @@ public static class StringExtensions
     {
         ArgumentNullException.ThrowIfNull(input, nameof(input));
 
-        if (input.Length == 0) return default;
-
-        var chunks = input.Split('|');
-        if (chunks.Length != 3) return default;
-
-        int?[] parts = new int?[3];
-        for (int i = 0; i < 3; i++)
+        if (input.Length == 0)
         {
-            parts[i] = int.TryParse(chunks[i], out var result) ? result : (int?)null;
+            return default;
         }
 
-        return new PartialDate(parts[0], parts[1], parts[2]);
+        var chunks = input.Split('|');
+        if (chunks.Length != 3)
+        {
+            return default;
+        }
+
+        var day = int.TryParse(chunks[0], out var d) ? d : (int?)null;
+        var month = int.TryParse(chunks[1], out var m) ? m : (int?)null;
+        var yearChunk = chunks[2];
+        var year = yearChunk.All(c => c == 'X') ? null : yearChunk;
+
+        return new PartialDate(day, month, year);
     }
 }

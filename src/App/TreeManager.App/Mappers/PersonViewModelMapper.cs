@@ -10,7 +10,7 @@ public static class PersonViewModelMapper
 
     public static MeFile ToMeFile(this PersonViewModel vm, MeFile existing = null)
     {
-        if (vm == null) throw new ArgumentNullException(nameof(vm));
+        ArgumentNullException.ThrowIfNull(vm, nameof(vm));
 
         var baseFile = existing ?? new MeFile();
 
