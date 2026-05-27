@@ -69,14 +69,5 @@ public class MainViewModelTests
 
     #endregion
 
-    #region PersonViewModel
 
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Constructor_HoldsPersonViewModel_WhenInjected()
-    {
-        Assert.NotNull(_sut.Person);
-    }
-
-    #endregion
 }

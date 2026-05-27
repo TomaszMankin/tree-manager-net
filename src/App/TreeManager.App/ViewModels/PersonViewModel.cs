@@ -1,11 +1,10 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
 
-public sealed partial class PersonViewModel : ObservableValidator
+public sealed partial class PersonViewModel : ObservableObject
 {
     [ObservableProperty]
     private string _firstName = string.Empty;
@@ -29,8 +28,6 @@ public sealed partial class PersonViewModel : ObservableValidator
     private bool _hasMaidenName;
 
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [CustomValidation(typeof(PersonViewModel), nameof(ValidateSex))]
     private Sex _sex = Sex.Unknown;
 
     [ObservableProperty]
@@ -41,13 +38,4 @@ public sealed partial class PersonViewModel : ObservableValidator
 
     [ObservableProperty]
     private Guid _uniqueIdentifier = Guid.Empty;
-
-    public static ValidationResult ValidateSex(Sex value, ValidationContext context)
-    {
-        return value == Sex.Unknown
-            ? new ValidationResult("Płeć jest wymagana")
-            : ValidationResult.Success;
-    }
-
-    public void ValidateAll() => ValidateAllProperties();
 }
