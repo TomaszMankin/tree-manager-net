@@ -13,6 +13,10 @@ public class DatesTabViewModelMapperTests
     [InlineData("12|03|1947", "12", "3", "1947")]
     [InlineData("--|03|1947", null, "3", "1947")]
     [InlineData("--|--|----", null, null, null)]
+    [InlineData("12|03|----", "12", "3", null)]
+    [InlineData("12|--|1947", "12", null, "1947")]
+    [InlineData("12|03|19--", "12", "3", "19--")]
+    [InlineData("12|03|198-", "12", "3", "198-")]
     public void ToDatesTabViewModel_MapsBirthDateComponents_WhenDatesOfBirthIsProvided(
         string input, string expectedDay, string expectedMonth, string expectedYear)
     {
