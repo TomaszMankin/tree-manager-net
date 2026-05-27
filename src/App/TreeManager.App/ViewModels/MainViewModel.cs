@@ -5,6 +5,13 @@ namespace TreeManager.App.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject
 {
+    public PersonViewModel Person { get; }
+
+    public MainViewModel(PersonViewModel person)
+    {
+        Person = person;
+    }
+
     [ObservableProperty]
     private AppMode _currentMode = AppMode.Add;
 

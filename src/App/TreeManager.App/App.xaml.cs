@@ -49,6 +49,7 @@ public partial class App : Application
         services.AddSingleton<IRootPickerService, RootPickerService>();
         services.AddSingleton<StartupBootstrapper>();
 
+        services.AddTransient<PersonViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();
 

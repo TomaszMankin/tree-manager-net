@@ -9,7 +9,7 @@ public class MainViewModelTests
 
     public MainViewModelTests()
     {
-        _sut = new MainViewModel();
+        _sut = new MainViewModel(new PersonViewModel());
     }
 
     #region SwitchMode
@@ -64,9 +64,10 @@ public class MainViewModelTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Constructor_InitializesCurrentModeToAdd_WhenInstantiated()
     {
-        //Act + Assert (one-liner; AAA omitted per code standards)
         Assert.Equal(AppMode.Add, _sut.CurrentMode);
     }
 
     #endregion
+
+
 }
