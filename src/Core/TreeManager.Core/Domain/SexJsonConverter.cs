@@ -8,7 +8,10 @@ public sealed class SexJsonConverter : JsonConverter<Sex>
 {
     public override Sex Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.Null) return Sex.Unknown;
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return Sex.Unknown;
+        }
 
         var raw = reader.GetString();
         return (raw ?? string.Empty).Trim() switch

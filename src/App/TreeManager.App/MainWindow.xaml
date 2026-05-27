@@ -41,7 +41,7 @@
                     <views:PersonDataTab DataContext="{Binding Person}"/>
                 </TabItem>
                 <TabItem Header="2.  Daty">
-                    <TextBlock Text="Zawartość zakładki — sprint-06+" Margin="32,24"/>
+                    <views:DatesTab DataContext="{Binding Dates}"/>
                 </TabItem>
                 <TabItem Header="3.  Rodzina">
                     <TextBlock Text="Zawartość zakładki — sprint-07+" Margin="32,24"/>

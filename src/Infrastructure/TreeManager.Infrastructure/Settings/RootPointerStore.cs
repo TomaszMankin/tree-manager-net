@@ -19,7 +19,10 @@ public sealed class RootPointerStore : IRootPointerStore
 
     public string Read()
     {
-        if (!_fs.FileExists(_pointerPath)) return string.Empty;
+        if (!_fs.FileExists(_pointerPath))
+        {
+            return string.Empty;
+        }
         return _fs.ReadAllText(_pointerPath).Trim();
     }
 

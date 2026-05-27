@@ -7,7 +7,7 @@ public static class MeFileMapper
 {
     public static PersonViewModel ToViewModel(this MeFile meFile)
     {
-        if (meFile == null) throw new System.ArgumentNullException(nameof(meFile));
+        ArgumentNullException.ThrowIfNull(meFile);
 
         return new PersonViewModel
         {

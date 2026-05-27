@@ -7,7 +7,7 @@ Date: 2026-05-24
 py-tree-manager (Python 3.11 + wxPython 4.2.4) hits scaling wall: 1600-line file, wheel install fragility, no headless testing, loose typing. Need rewrite to typed stack on Windows with clear layer rules from day 0.
 
 ## Decision
-.NET 10 WPF. Onion: `TreeManager.Core` (net10.0) holds domain entities + all interfaces under `Abstractions/<area>/`. `TreeManager.Infrastructure` (net10.0) holds Core-interface implementations. `TreeManager.App` (net10.0-windows) holds WPF views + ViewModels + DI wiring. Dependencies point inward only — App references Core + Infrastructure; Infrastructure references Core; Core references nothing external. Stack: CommunityToolkit.Mvvm (MVVM bindings/commands), Serilog + Serilog.Sinks.File (structured logging), xUnit + NSubstitute (tests). `Directory.Build.props` enforces `Nullable=enable`, `TreatWarningsAsErrors=true`, `LangVersion=latest` globally.
+.NET 10 WPF. Onion: `TreeManager.Core` (net10.0) holds domain entities + all interfaces under `Abstractions/<area>/`. `TreeManager.Infrastructure` (net10.0) holds Core-interface implementations. `TreeManager.App` (net10.0-windows) holds WPF views + ViewModels + DI wiring. Dependencies point inward only — App references Core + Infrastructure; Infrastructure references Core; Core references nothing external. Stack: CommunityToolkit.Mvvm (MVVM bindings/commands), Serilog + Serilog.Sinks.File (structured logging), xUnit + Moq (tests). `Directory.Build.props` enforces `Nullable=disable`, `TreatWarningsAsErrors=true`, `LangVersion=latest` globally.
 
 ## Rejected alternatives
 - PySide6: same Python ecosystem fragility; two stacks remain in parallel

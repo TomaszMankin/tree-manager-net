@@ -1,0 +1,54 @@
+<UserControl x:Class="TreeManager.App.Views.OptionalDatePickerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TreeManager.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:OptionalDatePickerViewModel}"
+             IsEnabled="{Binding IsEnabled}">
+    <StackPanel Orientation="Horizontal">
+        <TextBox Width="50" Margin="0,0,8,0" MaxLength="2"
+                 Text="{Binding Day, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 ToolTip="Dzień (1–31), puste = nieznany">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDayValid}" Value="False">
+                            <Setter Property="BorderBrush" Value="Red"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+        <TextBox Width="50" Margin="0,0,8,0" MaxLength="2"
+                 Text="{Binding Month, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 ToolTip="Miesiąc (1–12), puste = nieznany">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsMonthValid}" Value="False">
+                            <Setter Property="BorderBrush" Value="Red"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+        <TextBox Width="90" MaxLength="4"
+                 Text="{Binding Year, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 ToolTip="Rok (np. 1947, 19--, puste = nieznany)">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsYearValid}" Value="False">
+                            <Setter Property="BorderBrush" Value="Red"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+    </StackPanel>
+</UserControl>
