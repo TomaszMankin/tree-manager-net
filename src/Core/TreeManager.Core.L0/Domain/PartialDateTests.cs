@@ -28,8 +28,8 @@ public class PartialDateTests
     [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     [InlineData("12|03|--47")]
-    [InlineData("12|03|19X7")]
-    [InlineData("12|03|198X")]
+    [InlineData("12|03|19-7")]
+    [InlineData("12|03|198-")]
     public void ToPartialDate_PreservesPartialYear_WhenRoundTripped(string input)
     {
         //Arrange
