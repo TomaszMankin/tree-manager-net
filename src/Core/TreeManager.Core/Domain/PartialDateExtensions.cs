@@ -7,6 +7,24 @@ public static class PartialDateExtensions
     private const char SerializableSeparator = '|';
     private const char DateSeparator = '/';
 
+    /// <summary>Parses wire format "DD|MM|YYYY" (with "XX" wildcards) back to a <see cref="PartialDate"/>.</summary>
+    public static PartialDate ToPartialDate(this string input)
+    {
+        if (input == null) throw new ArgumentNullException(nameof(input));
+
+        var chunks = input.Split(SerializableSeparator);
+        if (chunks.Length != 3)
+            return default;
+
+        var convertedValues = new System.Collections.Generic.List<int?>();
+        foreach (var chunk in chunks)
+        {
+            convertedValues.Add(int.TryParse(chunk, out var result) ? result : (int?)null);
+        }
+
+        return new PartialDate(convertedValues[0], convertedValues[1], convertedValues[2]);
+    }
+
     /// <summary>Formats to wire format "DD|MM|YYYY" with "XX" wildcards.</summary>
     public static string ToSerializedString(this PartialDate date)
     {

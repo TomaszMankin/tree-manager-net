@@ -6,10 +6,12 @@ namespace TreeManager.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     public PersonViewModel Person { get; }
+    public DatesTabViewModel Dates { get; }
 
-    public MainViewModel(PersonViewModel person)
+    public MainViewModel(PersonViewModel person, DatesTabViewModel dates)
     {
         Person = person;
+        Dates = dates;
     }
 
     [ObservableProperty]

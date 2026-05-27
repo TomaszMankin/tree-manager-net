@@ -7,6 +7,24 @@ public class PartialDateTests
 {
     [Theory]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("12|03|1947", 12, 3, 1947)]
+    [InlineData("XX|03|1947", null, 3, 1947)]
+    [InlineData("XX|XX|XXXX", null, null, null)]
+    public void ToPartialDate_ReturnsExpectedDate_WhenInputIsValid(
+        string input, int? expectedDay, int? expectedMonth, int? expectedYear)
+    {
+        //Arrange
+        //Act
+        var result = input.ToPartialDate();
+
+        //Assert
+        Assert.Equal(expectedDay, result.Day);
+        Assert.Equal(expectedMonth, result.Month);
+        Assert.Equal(expectedYear, result.Year);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
     [InlineData(12, 3, 1947, "12|03|1947")]
     [InlineData(null, 3, 1947, "XX|03|1947")]
     [InlineData(null, null, null, "XX|XX|XXXX")]
