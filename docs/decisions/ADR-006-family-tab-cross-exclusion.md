@@ -9,10 +9,10 @@ The Family tab presents four relationship pickers (Parents, Children, Spouses, S
 
 ## Decision
 
-- Cross-exclusion is enforced per-session in `FamilyTabViewModel` only.
-- `FamilyTabViewModel` subscribes to each picker's `Selected.CollectionChanged` and recomputes exclusions across all four pickers on every change.
-- The loaded person's identifier is excluded from all four picker candidate lists (self-exclusion).
-- No cross-role constraint is stored in or validated against `MeFile` — the filesystem layer is write-only at save time and accepts whatever the ViewModel produces.
+- Cross-exclusion is enforced per-session in the ViewModel layer only; the filesystem layer accepts whatever the ViewModel produces.
+- Cross-exclusion lives in the ViewModel that aggregates the four pickers, recomputed reactively on any selection change across all four.
+- The loaded person is excluded from every picker's candidate list (self-exclusion).
+- No cross-role constraint is stored in or validated against the persisted file — the filesystem layer is write-only at save time.
 
 ## Rejected alternatives
 

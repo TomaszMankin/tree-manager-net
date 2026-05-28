@@ -37,10 +37,17 @@ public static class DatesTabViewModelMapper
         ArgumentNullException.ThrowIfNull(vm);
 
         var baseFile = existing ?? new MeFile();
-        var birth = new PartialDate(
-            int.TryParse(vm.BirthDate.Day, out var bd) ? bd : (int?)null,
-            int.TryParse(vm.BirthDate.Month, out var bm) ? bm : (int?)null,
-            vm.BirthDate.Year);
+
+        var birthIsEmpty = string.IsNullOrEmpty(vm.BirthDate.Day)
+            && string.IsNullOrEmpty(vm.BirthDate.Month)
+            && string.IsNullOrEmpty(vm.BirthDate.Year);
+
+        var birth = birthIsEmpty
+            ? (PartialDate?)null
+            : new PartialDate(
+                int.TryParse(vm.BirthDate.Day, out var bd) ? bd : (int?)null,
+                int.TryParse(vm.BirthDate.Month, out var bm) ? bm : (int?)null,
+                vm.BirthDate.Year);
 
         var death = vm.IsDeceased
             ? new PartialDate(
@@ -51,7 +58,7 @@ public static class DatesTabViewModelMapper
 
         return baseFile with
         {
-            DatesOfBirth = birth.ToSerializedString(),
+            DatesOfBirth = birth.HasValue ? birth.Value.ToSerializedString() : string.Empty,
             DatesOfDeath = death.HasValue ? death.Value.ToSerializedString() : string.Empty,
         };
     }

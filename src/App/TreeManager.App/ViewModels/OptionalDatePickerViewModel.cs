@@ -27,6 +27,17 @@ public sealed partial class OptionalDatePickerViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(value)) { return true; }
         if (value.Length != 4) { return false; }
-        return value.All(c => char.IsDigit(c) || c == '-');
+        // Partial years are trailing-truncation only (e.g. "184-", "18--"): digits first, then dashes, no interleaving.
+        var seenDash = false;
+        foreach (var c in value)
+        {
+            if (c == '-') { seenDash = true; }
+            else if (char.IsDigit(c))
+            {
+                if (seenDash) { return false; }
+            }
+            else { return false; }
+        }
+        return true;
     }
 }

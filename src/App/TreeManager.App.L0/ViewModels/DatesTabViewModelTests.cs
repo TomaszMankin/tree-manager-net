@@ -7,16 +7,23 @@ public class DatesTabViewModelTests
 {
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void DeathDate_IsDisabled_WhenIsDeceasedIsFalse()
+    public void IsDeceased_DisablesAndClearDeathDate_WhenToggledToFalse()
     {
         //Arrange
         var vm = new DatesTabViewModel();
+        vm.IsDeceased = true;
+        vm.DeathDate.Day = "10";
+        vm.DeathDate.Month = "4";
+        vm.DeathDate.Year = "1990";
 
         //Act
         vm.IsDeceased = false;
 
         //Assert
         Assert.False(vm.DeathDate.IsEnabled);
+        Assert.Null(vm.DeathDate.Day);
+        Assert.Null(vm.DeathDate.Month);
+        Assert.Null(vm.DeathDate.Year);
     }
 
     [Fact]

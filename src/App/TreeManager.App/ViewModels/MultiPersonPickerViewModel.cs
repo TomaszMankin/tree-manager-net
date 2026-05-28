@@ -49,6 +49,7 @@ public sealed partial class MultiPersonPickerViewModel : ObservableObject
     [RelayCommand]
     private void Remove(PersonSummary person)
     {
+        if (person == null) { return; }
         var existing = Selected.FirstOrDefault(s => s.UniqueIdentifier == person.UniqueIdentifier);
         if (existing != null)
         {

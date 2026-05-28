@@ -8,7 +8,6 @@
         <SolidColorBrush x:Key="EditDraftModeBrush" Color="#F9FBE7"/>
         <conv:ModeToBackgroundBrushConverter x:Key="ModeToBackgroundBrushConverter"/>
         <conv:SexToBoolConverter x:Key="SexToBoolConverter"/>
-        <conv:NullableIntToStringConverter x:Key="NullableIntToStringConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
         <!-- Implicit TextBox style — applied to all TextBox controls in app -->
