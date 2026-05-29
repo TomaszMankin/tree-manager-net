@@ -9,10 +9,12 @@ The Family tab presents four relationship pickers (Parents, Children, Spouses, S
 
 ## Decision
 
-- Cross-exclusion enforced in ViewModel layer only, scoped to the person currently being edited; filesystem layer accepts whatever the ViewModel produces.
-- Cross-exclusion lives in the ViewModel that aggregates the four pickers, recomputed reactively on any selection change across all four.
-- The loaded person is excluded from every picker's candidate list (self-exclusion).
-- No cross-role constraint is stored in or validated against the persisted file — the filesystem layer is write-only at save time.
+- Cross-exclusion enforced in ViewModel layer only; filesystem layer accepts whatever ViewModel produces.
+- Exclusion local to current person's four pickers — computed from that person's OWN relationship lists only. Recomputed reactively on any selection change across the four.
+- Loaded person excluded from every picker (self-exclusion).
+- Opening another person inherits NO exclusions from a prior editing session. Person A selections have zero effect on Person B picker state — exclusion always derives from the person currently loaded, never from who was edited before.
+- Bidirectional sync (set someone as child → that someone gets this person as parent) is a SAVE concern, not a picker concern (issue #8). Pickers show only what is already in the loaded person's own persisted lists.
+- No cross-role constraint stored in or validated against the persisted file — filesystem layer is write-only at save time.
 
 ## Rejected alternatives
 
@@ -23,5 +25,6 @@ The Family tab presents four relationship pickers (Parents, Children, Spouses, S
 
 + Exclusion logic is fast and stateless — no I/O on every selection change.
 + Existing me.json files with overlapping roles (legacy data) load without error; the constraint applies only to new edits on the loaded person.
-- A person saved in two roles across separate edits is not prevented; issue #14 (`TreeConsistencyValidator`) is the intended resolution.
-- State is per-person, not per-app-session — must reset fully when loading a different person (issue #9): all selections cleared, loaded-person id updated. Exclusions from person A must not carry into person B's editing. B set as A's child disappears from A's dropdowns, but reappears for C if not set in any of C's roles.
+- A person saved in two roles across separate edits is not prevented; issue #14 is the intended resolution.
+- Switching person resets state fully — reload entirely from the new person's persisted data, nothing carries over (issue #9). B set as A's child vanishes from A's pickers but stays available for C when C's own lists do not hold B.
+- Edge case (shared children across relationships): if A holds C as child and B is A's spouse, editing B does NOT exclude C from B's pickers — B is not assumed a parent. C is excluded from B's pickers only when B's OWN persisted lists already hold C.
