@@ -25,13 +25,15 @@ public class PersonRepositoryTests
 
     private readonly Mock<IFileSystemFacade> _fs;
     private readonly Mock<IMeFileProcessor> _processor;
+    private readonly Mock<ILogger> _mockLogger;
     private readonly PersonRepository _sut;
 
     public PersonRepositoryTests()
     {
         _fs = new Mock<IFileSystemFacade>();
         _processor = new Mock<IMeFileProcessor>();
-        _sut = new PersonRepository(_fs.Object, _processor.Object, Log.Logger);
+        _mockLogger = new Mock<ILogger>();
+        _sut = new PersonRepository(_fs.Object, _processor.Object, _mockLogger.Object);
     }
 
     #region Create
@@ -53,7 +55,7 @@ public class PersonRepositoryTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Create_CallsWriteMeFile_ForOwnFile_WhenCalled()
+    public void Create_WritesOwnMeFile_WhenCalled()
     {
         //Arrange
         var person = BuildPerson("Jan Kowalski");
@@ -68,7 +70,7 @@ public class PersonRepositoryTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Create_CallsWriteMeFile_ForRelatedPerson_WhenRelationshipExists()
+    public void Create_WritesRelatedMeFile_WhenRelationshipExists()
     {
         //Arrange
         var person = BuildPersonWithParent("Jan Kowalski", RelatedId);
@@ -119,8 +121,11 @@ public class PersonRepositoryTests
         //Act — must not throw
         _sut.Create(person, RootPath);
 
-        //Assert — own file still written
+        //Assert — own file still written and failure was logged
         _processor.Verify(x => x.WriteMeFile(PersonMeJson, person), Times.Once());
+        _mockLogger.Verify(
+            x => x.Warning(It.IsAny<Exception>(), "Failed to sync relationship to {Path}", It.IsAny<string>()),
+            Times.Once());
     }
 
     [Fact]

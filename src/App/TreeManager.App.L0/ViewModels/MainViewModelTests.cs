@@ -106,7 +106,7 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Save_SetsIsBusyFalsAfterExecution_WhenCommandCompletes()
+    public void Save_SetsIsBusyFalseAfterExecution_WhenCommandCompletes()
     {
         //Arrange
         //Act
