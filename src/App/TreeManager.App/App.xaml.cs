@@ -9,6 +9,7 @@ using TreeManager.Core.Abstractions.Settings;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
+using Serilog;
 
 namespace TreeManager.App;
 
@@ -43,9 +44,11 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        services.AddSingleton<Serilog.ILogger>(Log.Logger);
         services.AddSingleton<IFileSystemFacade, FileSystemFacade>();
         services.AddSingleton<IRootPointerStore, RootPointerStore>();
         services.AddSingleton<IMeFileProcessor, MeFileProcessor>();
+        services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IPersonDirectoryService, PersonDirectoryService>();
         services.AddSingleton<IRootPickerService, RootPickerService>();
         services.AddSingleton<StartupBootstrapper>();
