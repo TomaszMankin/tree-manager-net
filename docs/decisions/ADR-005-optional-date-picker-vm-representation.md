@@ -29,7 +29,7 @@ The ViewModel layer needs a representation for user interaction that supports th
 ## Decision
 
 - All three date components (day, month, year) are independently optional and entered as free text.
-- Year allows partial values ("184-", "18--") not expressible as integers.
+- Year allows partial values not expressible as integers: any 4-char string where each char is a digit or `-`, no ordering constraint — middle wildcards valid. Examples: `"1947"`, `"194-"`, `"19-4"`, `"18--"`, `"1---"`, `"----"`.
 - Invalid input is shown visually; the user is not blocked from saving work-in-progress.
 - `IsDeceased` derived from `DatesOfDeath` being non-empty — no flag added to `MeFile`.
 - `DeathDate` enabled only when `IsDeceased` is true.
@@ -46,6 +46,6 @@ The ViewModel layer needs a representation for user interaction that supports th
 ## Consequences
 
 + Each date component independently unknown — correct model for historical records.
-+ Partial years ("184-", "18--") expressible and preserved through the full data round-trip.
++ Partial years ("184-", "19-4", "18--") expressible and preserved through the full data round-trip.
 + Validation is advisory, not blocking — preserves ability to save work-in-progress.
 - Free-text removes automatic day-range clamping; user sees validation feedback instead of prevention.

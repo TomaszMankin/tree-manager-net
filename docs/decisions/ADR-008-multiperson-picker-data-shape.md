@@ -5,7 +5,7 @@
 
 ## Problem
 
-Family-tab pickers filter candidates by three independent inputs: search text, cross-role exclusions, own selection. Two WPF patterns viable: ICollectionView with filter delegate (incremental, textbook) vs computed list property re-raised on every change (full rebind). Choice locks the pattern for sprint-08 and sprint-09 pickers — consistency across pickers matters more than per-picker micro-optimisation.
+Family-tab pickers filter candidates by three independent inputs: search text, cross-role exclusions, own selection. Two WPF patterns viable: ICollectionView with filter delegate (incremental, textbook) vs computed list property re-raised on every change (full rebind). Choice locks the pattern for issue #8 and issue #9 pickers — consistency across pickers matters more than per-picker micro-optimisation.
 
 ## Decision
 
@@ -18,5 +18,5 @@ Candidates exposed as a computed, fully-recomputed list property re-raised on ev
 
 ## Consequences
 
-- Good: full L0 coverage without WPF host; stateless, no filter-delegate lifecycle; pattern locked for sprint-08/09.
+- Good: full L0 coverage without WPF host; stateless, no filter-delegate lifecycle; pattern locked for issue #8/#9.
 - Bad: full rebind per keystroke, perceptible past ~5000 entries (not current concern); SelectedItem reset on rebind (tolerable with Add-button model).

@@ -9,7 +9,7 @@ The Family tab presents four relationship pickers (Parents, Children, Spouses, S
 
 ## Decision
 
-- Cross-exclusion is enforced per-session in the ViewModel layer only; the filesystem layer accepts whatever the ViewModel produces.
+- Cross-exclusion enforced in ViewModel layer only, scoped to the person currently being edited; filesystem layer accepts whatever the ViewModel produces.
 - Cross-exclusion lives in the ViewModel that aggregates the four pickers, recomputed reactively on any selection change across all four.
 - The loaded person is excluded from every picker's candidate list (self-exclusion).
 - No cross-role constraint is stored in or validated against the persisted file — the filesystem layer is write-only at save time.
@@ -22,5 +22,6 @@ The Family tab presents four relationship pickers (Parents, Children, Spouses, S
 ## Consequences
 
 + Exclusion logic is fast and stateless — no I/O on every selection change.
-+ Existing me.json files with overlapping roles (legacy data) load without error; the constraint applies only to new edits within a session.
-- A person saved in two roles across separate sessions is not prevented; issue #14 (`TreeConsistencyValidator`) is the intended resolution.
++ Existing me.json files with overlapping roles (legacy data) load without error; the constraint applies only to new edits on the loaded person.
+- A person saved in two roles across separate edits is not prevented; issue #14 (`TreeConsistencyValidator`) is the intended resolution.
+- State is per-person, not per-app-session — must reset fully when loading a different person (issue #9): all selections cleared, loaded-person id updated. Exclusions from person A must not carry into person B's editing. B set as A's child disappears from A's dropdowns, but reappears for C if not set in any of C's roles.
