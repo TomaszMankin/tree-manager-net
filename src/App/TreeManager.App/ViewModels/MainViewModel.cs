@@ -7,11 +7,13 @@ public sealed partial class MainViewModel : ObservableObject
 {
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
+    public FamilyTabViewModel Family { get; }
 
-    public MainViewModel(PersonViewModel person, DatesTabViewModel dates)
+    public MainViewModel(PersonViewModel person, DatesTabViewModel dates, FamilyTabViewModel family)
     {
         Person = person;
         Dates = dates;
+        Family = family;
     }
 
     [ObservableProperty]

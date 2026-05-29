@@ -181,6 +181,23 @@ public class DatesTabViewModelMapperTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_SerializesEmptyDatesOfBirth_WhenAllBirthComponentsAreEmpty()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.BirthDate.Day = null;
+        vm.BirthDate.Month = null;
+        vm.BirthDate.Year = null;
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal(string.Empty, result.DatesOfBirth);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void ToMeFile_ThrowsArgumentNullException_WhenViewModelIsNull()
     {
         Assert.Throws<ArgumentNullException>(() => ((DatesTabViewModel)null).ToMeFile());

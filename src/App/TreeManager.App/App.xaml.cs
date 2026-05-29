@@ -46,11 +46,13 @@ public partial class App : Application
         services.AddSingleton<IFileSystemFacade, FileSystemFacade>();
         services.AddSingleton<IRootPointerStore, RootPointerStore>();
         services.AddSingleton<IMeFileProcessor, MeFileProcessor>();
+        services.AddSingleton<IPersonDirectoryService, PersonDirectoryService>();
         services.AddSingleton<IRootPickerService, RootPickerService>();
         services.AddSingleton<StartupBootstrapper>();
 
         services.AddTransient<OptionalDatePickerViewModel>();
         services.AddTransient<DatesTabViewModel>();
+        services.AddTransient<FamilyTabViewModel>();
         services.AddTransient<PersonViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();
