@@ -51,6 +51,9 @@ public partial class App : Application
         services.AddSingleton<IPersonRepository, PersonRepository>();
         services.AddSingleton<IPersonDirectoryService, PersonDirectoryService>();
         services.AddSingleton<IRootPickerService, RootPickerService>();
+        services.AddSingleton<IPersonLoaderService, PersonLoaderService>();
+        services.AddSingleton<IPersonPickerService, PersonPickerService>();
+        services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
         services.AddTransient<OptionalDatePickerViewModel>();

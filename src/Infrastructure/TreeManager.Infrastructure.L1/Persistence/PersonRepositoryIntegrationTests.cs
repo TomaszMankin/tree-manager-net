@@ -103,6 +103,129 @@ public class PersonRepositoryIntegrationTests : IDisposable
 
     #endregion
 
+    #region Update
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L1)]
+    public void Update_WritesEditedMeFile_WhenFieldsChanged()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var original = new MeFile
+        {
+            UniqueIdentifier = personId,
+            PersonName = "Jan Kowalski",
+            FirstName = "Jan",
+        };
+        var personFolder = Path.Combine(_rootPath, "Lista osób", "Jan Kowalski");
+        Directory.CreateDirectory(personFolder);
+        File.WriteAllText(
+            Path.Combine(personFolder, "me.json"),
+            JsonSerializer.Serialize(original, MeFile.DefaultOptions));
+
+        var edited = original with { FirstName = "Janusz" };
+
+        //Act
+        _sut.Update(edited, original, _rootPath);
+
+        //Assert
+        var written = JsonSerializer.Deserialize<MeFile>(
+            File.ReadAllText(Path.Combine(personFolder, "me.json")), MeFile.DefaultOptions);
+        Assert.Equal("Janusz", written.FirstName);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L1)]
+    public void Update_RemovesRelationshipFromRelated_WhenParentRemoved()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var parentId = Guid.NewGuid();
+
+        var parentFolder = Path.Combine(_rootPath, "Lista osób", "Anna Nowak");
+        Directory.CreateDirectory(parentFolder);
+        var parentOriginal = new MeFile
+        {
+            UniqueIdentifier = parentId,
+            PersonName = "Anna Nowak",
+            ChildrenId = new List<Guid> { personId },
+            Children = new List<string> { "Jan Kowalski" },
+        };
+        File.WriteAllText(
+            Path.Combine(parentFolder, "me.json"),
+            JsonSerializer.Serialize(parentOriginal, MeFile.DefaultOptions));
+
+        var personFolder = Path.Combine(_rootPath, "Lista osób", "Jan Kowalski");
+        Directory.CreateDirectory(personFolder);
+        var snapshot = new MeFile
+        {
+            UniqueIdentifier = personId,
+            PersonName = "Jan Kowalski",
+            ParentsId = new List<Guid> { parentId },
+            Parents = new List<string> { "Anna Nowak" },
+        };
+        File.WriteAllText(
+            Path.Combine(personFolder, "me.json"),
+            JsonSerializer.Serialize(snapshot, MeFile.DefaultOptions));
+
+        var edited = snapshot with { ParentsId = [], Parents = [] };
+
+        //Act
+        _sut.Update(edited, snapshot, _rootPath);
+
+        //Assert
+        var updatedParent = JsonSerializer.Deserialize<MeFile>(
+            File.ReadAllText(Path.Combine(parentFolder, "me.json")), MeFile.DefaultOptions);
+        Assert.DoesNotContain(personId, updatedParent.ChildrenId);
+        Assert.DoesNotContain("Jan Kowalski", updatedParent.Children);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L1)]
+    public void Update_ProducesZeroExtraWrites_WhenNoChanges()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var parentId = Guid.NewGuid();
+
+        var parentFolder = Path.Combine(_rootPath, "Lista osób", "Anna Nowak");
+        Directory.CreateDirectory(parentFolder);
+        var parentFile = new MeFile
+        {
+            UniqueIdentifier = parentId,
+            PersonName = "Anna Nowak",
+            ChildrenId = new List<Guid> { personId },
+            Children = new List<string> { "Jan Kowalski" },
+        };
+        File.WriteAllText(
+            Path.Combine(parentFolder, "me.json"),
+            JsonSerializer.Serialize(parentFile, MeFile.DefaultOptions));
+
+        var personFolder = Path.Combine(_rootPath, "Lista osób", "Jan Kowalski");
+        Directory.CreateDirectory(personFolder);
+        var snapshot = new MeFile
+        {
+            UniqueIdentifier = personId,
+            PersonName = "Jan Kowalski",
+            ParentsId = new List<Guid> { parentId },
+            Parents = new List<string> { "Anna Nowak" },
+        };
+        File.WriteAllText(
+            Path.Combine(personFolder, "me.json"),
+            JsonSerializer.Serialize(snapshot, MeFile.DefaultOptions));
+
+        var parentLastWrite = File.GetLastWriteTimeUtc(Path.Combine(parentFolder, "me.json"));
+
+        //Act
+        _sut.Update(snapshot, snapshot, _rootPath);
+
+        //Assert — parent file NOT touched (no delta)
+        var parentCurrentWrite = File.GetLastWriteTimeUtc(Path.Combine(parentFolder, "me.json"));
+        Assert.Equal(parentLastWrite, parentCurrentWrite);
+    }
+
+    #endregion
+
     public void Dispose()
     {
         if (Directory.Exists(_rootPath))

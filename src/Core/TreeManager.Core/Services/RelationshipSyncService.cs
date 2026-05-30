@@ -116,5 +116,75 @@ public static class RelationshipSyncService
         return result;
     }
 
+    /// <summary>
+    /// Removes <paramref name="sourceId"/> from <paramref name="target"/> according to
+    /// <paramref name="roleSourceHoldsForTarget"/>. Returns the same reference when nothing changed;
+    /// returns a new record when an entry was removed.
+    /// </summary>
+    public static MeFile RemoveBidirectionalSync(
+        MeFile target,
+        Guid sourceId,
+        RelationshipRole roleSourceHoldsForTarget)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        switch (roleSourceHoldsForTarget)
+        {
+            case RelationshipRole.IsChildOf:
+            {
+                var idx = target.ChildrenId.IndexOf(sourceId);
+                if (idx < 0) { return target; }
+                return target with
+                {
+                    ChildrenId = RemoveAt(target.ChildrenId, idx),
+                    Children = RemoveAt(target.Children, idx),
+                };
+            }
+
+            case RelationshipRole.IsParentOf:
+            {
+                var idx = target.ParentsId.IndexOf(sourceId);
+                if (idx < 0) { return target; }
+                return target with
+                {
+                    ParentsId = RemoveAt(target.ParentsId, idx),
+                    Parents = RemoveAt(target.Parents, idx),
+                };
+            }
+
+            case RelationshipRole.IsSpouseOf:
+            {
+                var idx = target.SpouseId.IndexOf(sourceId);
+                if (idx < 0) { return target; }
+                return target with
+                {
+                    SpouseId = RemoveAt(target.SpouseId, idx),
+                    Spouse = RemoveAt(target.Spouse, idx),
+                };
+            }
+
+            case RelationshipRole.IsSiblingOf:
+            {
+                var idx = target.SiblingsId.IndexOf(sourceId);
+                if (idx < 0) { return target; }
+                return target with
+                {
+                    SiblingsId = RemoveAt(target.SiblingsId, idx),
+                    Siblings = RemoveAt(target.Siblings, idx),
+                };
+            }
+
+            default:
+                return target;
+        }
+    }
+
+    private static List<T> RemoveAt<T>(List<T> source, int index)
+    {
+        var result = new List<T>(source);
+        result.RemoveAt(index);
+        return result;
+    }
+
     private enum ListKind { None, Children, Parents, Spouse, Siblings }
 }
