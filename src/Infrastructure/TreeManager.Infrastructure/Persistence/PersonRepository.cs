@@ -48,6 +48,73 @@ public sealed class PersonRepository : IPersonRepository
         var index = BuildIndex(rootPath);
 
         ApplyDeltaSync(person, originalSnapshot, index);
+
+        if (person.PersonName != originalSnapshot.PersonName)
+        {
+            PropagateNameChange(person, index);
+        }
+    }
+
+    private void PropagateNameChange(MeFile person, IReadOnlyDictionary<Guid, string> uuidToPath)
+    {
+        foreach (var kvp in uuidToPath)
+        {
+            if (kvp.Key == person.UniqueIdentifier)
+            {
+                continue;
+            }
+
+            try
+            {
+                var meFile = _processor.ReadMeFile(kvp.Value);
+                var changed = false;
+
+                var parentIdx = meFile.ParentsId.IndexOf(person.UniqueIdentifier);
+                if (parentIdx >= 0)
+                {
+                    var updatedNames = meFile.Parents.ToList();
+                    updatedNames[parentIdx] = person.PersonName;
+                    meFile = meFile with { Parents = updatedNames };
+                    changed = true;
+                }
+
+                var childIdx = meFile.ChildrenId.IndexOf(person.UniqueIdentifier);
+                if (childIdx >= 0)
+                {
+                    var updatedNames = meFile.Children.ToList();
+                    updatedNames[childIdx] = person.PersonName;
+                    meFile = meFile with { Children = updatedNames };
+                    changed = true;
+                }
+
+                var spouseIdx = meFile.SpouseId.IndexOf(person.UniqueIdentifier);
+                if (spouseIdx >= 0)
+                {
+                    var updatedNames = meFile.Spouse.ToList();
+                    updatedNames[spouseIdx] = person.PersonName;
+                    meFile = meFile with { Spouse = updatedNames };
+                    changed = true;
+                }
+
+                var siblingIdx = meFile.SiblingsId.IndexOf(person.UniqueIdentifier);
+                if (siblingIdx >= 0)
+                {
+                    var updatedNames = meFile.Siblings.ToList();
+                    updatedNames[siblingIdx] = person.PersonName;
+                    meFile = meFile with { Siblings = updatedNames };
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    _processor.WriteMeFile(kvp.Value, meFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Failed to propagate name change to {Path}", kvp.Value);
+            }
+        }
     }
 
     private void ApplyDeltaSync(MeFile person, MeFile snapshot, Dictionary<Guid, string> index)

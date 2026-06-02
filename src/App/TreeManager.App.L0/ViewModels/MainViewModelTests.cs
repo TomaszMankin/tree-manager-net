@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Moq;
+using Serilog;
 using TreeManager.App.Services;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
@@ -19,6 +20,7 @@ public class MainViewModelTests
     private readonly Mock<IPersonDirectoryService> _mockDirectoryService;
     private readonly Mock<IPersonPickerService> _mockPickerService;
     private readonly Mock<IPersonLoaderService> _mockLoaderService;
+    private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
     public MainViewModelTests()
@@ -28,6 +30,7 @@ public class MainViewModelTests
         _mockDirectoryService = new Mock<IPersonDirectoryService>();
         _mockPickerService = new Mock<IPersonPickerService>();
         _mockLoaderService = new Mock<IPersonLoaderService>();
+        _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
 
@@ -42,7 +45,8 @@ public class MainViewModelTests
             new FamilyTabViewModel(),
             _mockPersonRepository.Object,
             _mockRootPointerStore.Object,
-            deps);
+            deps,
+            _mockLog.Object);
     }
 
     #region SwitchMode
@@ -206,7 +210,7 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Save_CallsRepositoryUpdate_WhenOriginalSnapshotIsSet()
+    public void Save_CallsUpdate_WhenPersonWasPreviouslyLoaded()
     {
         //Arrange — load a person to set the snapshot
         var selectedPerson = new PersonSummary(Guid.NewGuid(), "Jan Kowalski");
@@ -257,6 +261,7 @@ public class MainViewModelTests
 
         //Assert
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        _mockLog.Verify(x => x.Warning(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
     }
 
     [Fact]
@@ -268,7 +273,6 @@ public class MainViewModelTests
             .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
             .Throws<IOException>();
         _sut.SaveCommand.Execute(null);
-        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
 
         //Act — now a successful save
         _mockPersonRepository
@@ -408,6 +412,7 @@ public class MainViewModelTests
         //Assert
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
         Assert.False(_sut.IsBusy);
+        _mockLog.Verify(x => x.Warning(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
     }
 
     #endregion

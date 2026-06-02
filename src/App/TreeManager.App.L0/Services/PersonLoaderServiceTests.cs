@@ -40,21 +40,6 @@ public class PersonLoaderServiceTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Load_PopulatesPersonVmFirstName_WhenMeFileHasFirstName()
-    {
-        //Arrange
-        var meFile = new MeFile { FirstName = "Jan" };
-        _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
-
-        //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
-
-        //Assert
-        Assert.Equal("Jan", _personVm.FirstName);
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Load_PopulatesPersonVmAllFields_WhenMeFileIsFullyPopulated()
     {
         //Arrange

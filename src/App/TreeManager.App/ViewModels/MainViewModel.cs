@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IPersonRepository _personRepository;
     private readonly IRootPointerStore _rootPointerStore;
     private readonly PersonEditDependencies _editDeps;
+    private readonly ILogger _log;
 
     private MeFile _originalSnapshot;
 
@@ -31,7 +32,8 @@ public sealed partial class MainViewModel : ObservableObject
         FamilyTabViewModel family,
         IPersonRepository personRepository,
         IRootPointerStore rootPointerStore,
-        PersonEditDependencies editDeps)
+        PersonEditDependencies editDeps,
+        ILogger log)
     {
         Person = person;
         Dates = dates;
@@ -39,6 +41,7 @@ public sealed partial class MainViewModel : ObservableObject
         _personRepository = personRepository;
         _rootPointerStore = rootPointerStore;
         _editDeps = editDeps;
+        _log = log;
     }
 
     [ObservableProperty]
@@ -67,7 +70,7 @@ public sealed partial class MainViewModel : ObservableObject
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
         {
-            Log.Warning("OpenPerson called with empty root path");
+            _log.Warning("OpenPerson called with empty root path");
             return;
         }
 
@@ -87,7 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "OpenPerson failed to load {Person}", selected.DisplayName);
+            _log.Warning(ex, "OpenPerson failed to load {Person}", selected.DisplayName);
             ErrorMessage = "Nie udało się wczytać osoby. Spróbuj ponownie.";
         }
     }
@@ -101,7 +104,7 @@ public sealed partial class MainViewModel : ObservableObject
             var rootPath = _rootPointerStore.Read();
             if (string.IsNullOrWhiteSpace(rootPath))
             {
-                Log.Warning("Save called with empty root path");
+                _log.Warning("Save called with empty root path");
                 return;
             }
 
@@ -133,7 +136,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Save failed");
+            _log.Warning(ex, "Save failed");
             ErrorMessage = "Zapis nie powiódł się. Spróbuj ponownie.";
         }
         finally

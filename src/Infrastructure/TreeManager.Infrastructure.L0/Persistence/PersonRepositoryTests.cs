@@ -286,6 +286,82 @@ public class PersonRepositoryTests
             Times.Once());
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Update_PropagatesNameChange_WhenPersonNameChanged()
+    {
+        //Arrange
+        var snapshot = BuildPerson("Jan Kowalski");
+        var person = new MeFile { UniqueIdentifier = PersonId, PersonName = "Jan Nowy" };
+        var relatedMeFile = new MeFile
+        {
+            UniqueIdentifier = RelatedId,
+            PersonName = "Anna Nowak",
+            ChildrenId = new List<Guid> { PersonId },
+            Children = new List<string> { "Jan Kowalski" },
+        };
+        SetupScanWithRelated(relatedMeFile);
+
+        //Act
+        _sut.Update(person, snapshot, RootPath);
+
+        //Assert
+        _processor.Verify(
+            x => x.WriteMeFile(RelatedMeJson, It.Is<MeFile>(m => m.Children.Contains("Jan Nowy"))),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Update_DoesNotPropagateNames_WhenNameUnchanged()
+    {
+        //Arrange
+        var snapshot = BuildPerson("Jan Kowalski");
+        var person = BuildPerson("Jan Kowalski");
+        var relatedMeFile = new MeFile
+        {
+            UniqueIdentifier = RelatedId,
+            PersonName = "Anna Nowak",
+            ChildrenId = new List<Guid> { PersonId },
+            Children = new List<string> { "Jan Kowalski" },
+        };
+        SetupScanWithRelated(relatedMeFile);
+
+        //Act
+        _sut.Update(person, snapshot, RootPath);
+
+        //Assert — related file not written for name propagation (bidir sync has no delta either)
+        _processor.Verify(x => x.WriteMeFile(RelatedMeJson, It.IsAny<MeFile>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Update_LogsWarning_WhenNamePropagationFails()
+    {
+        //Arrange
+        var snapshot = BuildPerson("Jan Kowalski");
+        var person = new MeFile { UniqueIdentifier = PersonId, PersonName = "Jan Nowy" };
+        var relatedMeFile = new MeFile
+        {
+            UniqueIdentifier = RelatedId,
+            PersonName = "Anna Nowak",
+            ParentsId = new List<Guid> { PersonId },
+            Parents = new List<string> { "Jan Kowalski" },
+        };
+        SetupScanWithRelated(relatedMeFile);
+        _processor
+            .Setup(x => x.WriteMeFile(RelatedMeJson, It.IsAny<MeFile>()))
+            .Throws<IOException>();
+
+        //Act — must not throw
+        _sut.Update(person, snapshot, RootPath);
+
+        //Assert
+        _mockLogger.Verify(
+            x => x.Warning(It.IsAny<Exception>(), "Failed to propagate name change to {Path}", RelatedMeJson),
+            Times.Once());
+    }
+
     #endregion
 
     #region Helpers
