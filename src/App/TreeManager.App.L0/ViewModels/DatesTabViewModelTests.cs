@@ -1,5 +1,7 @@
+using TreeManager.App.Mappers;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
+using TreeManager.Core.Domain;
 
 namespace TreeManager.App.L0.ViewModels;
 
@@ -83,4 +85,51 @@ public class DatesTabViewModelTests
         //Assert
         Assert.False(vm.IsDeceased);
     }
+
+    #region Reset
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Reset_SetsIsDeceased_WhenMeFileHasDatesOfDeath()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        var meFile = new MeFile { DatesOfDeath = "10|04|1990" };
+
+        //Act
+        vm.Reset(meFile);
+
+        //Assert
+        Assert.True(vm.IsDeceased);
+        Assert.Equal("10", vm.DeathDate.Day);
+        Assert.Equal("4", vm.DeathDate.Month);
+        Assert.Equal("1990", vm.DeathDate.Year);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Reset_ClearsDatesAndIsDeceased_WhenMeFileHasNoDatesOfDeath()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.IsDeceased = true;
+        vm.DeathDate.Day = "5";
+        vm.DeathDate.Month = "6";
+        vm.DeathDate.Year = "2000";
+        var meFile = new MeFile { DatesOfBirth = "01|01|1950" };
+
+        //Act
+        vm.Reset(meFile);
+
+        //Assert
+        Assert.False(vm.IsDeceased);
+        Assert.Null(vm.DeathDate.Day);
+        Assert.Null(vm.DeathDate.Month);
+        Assert.Null(vm.DeathDate.Year);
+        Assert.Equal("1", vm.BirthDate.Day);
+        Assert.Equal("1", vm.BirthDate.Month);
+        Assert.Equal("1950", vm.BirthDate.Year);
+    }
+
+    #endregion
 }

@@ -134,4 +134,128 @@ public class FamilyTabViewModelMapperTests
     }
 
     #endregion
+
+    #region ToFamilyTabViewModel
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_PopulatesParentsSelected_WhenMeFileHasParents()
+    {
+        //Arrange
+        var parentId = Guid.NewGuid();
+        var meFile = new MeFile
+        {
+            ParentsId = new List<Guid> { parentId },
+            Parents = new List<string> { "Parent One" },
+        };
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Single(result.Parents.Selected);
+        Assert.Equal(parentId, result.Parents.Selected[0].UniqueIdentifier);
+        Assert.Equal("Parent One", result.Parents.Selected[0].DisplayName);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_PopulatesChildrenSelected_WhenMeFileHasChildren()
+    {
+        //Arrange
+        var childId = Guid.NewGuid();
+        var meFile = new MeFile
+        {
+            ChildrenId = new List<Guid> { childId },
+            Children = new List<string> { "Child One" },
+        };
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Single(result.Children.Selected);
+        Assert.Equal(childId, result.Children.Selected[0].UniqueIdentifier);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_PopulatesSpousesSelected_WhenMeFileHasSpouses()
+    {
+        //Arrange
+        var spouseId = Guid.NewGuid();
+        var meFile = new MeFile
+        {
+            SpouseId = new List<Guid> { spouseId },
+            Spouse = new List<string> { "Spouse One" },
+        };
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Single(result.Spouses.Selected);
+        Assert.Equal(spouseId, result.Spouses.Selected[0].UniqueIdentifier);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_PopulatesSiblingsSelected_WhenMeFileHasSiblings()
+    {
+        //Arrange
+        var siblingId = Guid.NewGuid();
+        var meFile = new MeFile
+        {
+            SiblingsId = new List<Guid> { siblingId },
+            Siblings = new List<string> { "Sibling One" },
+        };
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Single(result.Siblings.Selected);
+        Assert.Equal(siblingId, result.Siblings.Selected[0].UniqueIdentifier);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_SetsLoadedPersonId_WhenMeFileHasUniqueIdentifier()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var meFile = new MeFile { UniqueIdentifier = personId };
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Equal(personId, result.LoadedPersonId);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_ProducesEmptySelections_WhenMeFileHasNoRelationships()
+    {
+        //Arrange
+        var meFile = new MeFile();
+
+        //Act
+        var result = meFile.ToFamilyTabViewModel();
+
+        //Assert
+        Assert.Empty(result.Parents.Selected);
+        Assert.Empty(result.Children.Selected);
+        Assert.Empty(result.Spouses.Selected);
+        Assert.Empty(result.Siblings.Selected);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToFamilyTabViewModel_Throws_WhenSourceIsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => ((MeFile)null).ToFamilyTabViewModel());
+    }
+
+    #endregion
 }

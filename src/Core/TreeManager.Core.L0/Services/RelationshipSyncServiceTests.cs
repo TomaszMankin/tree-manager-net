@@ -152,4 +152,123 @@ public class RelationshipSyncServiceTests
     }
 
     #endregion
+
+    #region RemoveBidirectionalSync
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_RemovesSourceFromChildrenList_WhenSourceIsParentOfTarget()
+    {
+        //Arrange
+        var target = new MeFile
+        {
+            ChildrenId = new List<Guid> { SourceId },
+            Children = new List<string> { SourceName },
+        };
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsChildOf);
+
+        //Assert
+        Assert.DoesNotContain(SourceId, result.ChildrenId);
+        Assert.DoesNotContain(SourceName, result.Children);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_RemovesSourceFromParentsList_WhenSourceIsChildOfTarget()
+    {
+        //Arrange
+        var target = new MeFile
+        {
+            ParentsId = new List<Guid> { SourceId },
+            Parents = new List<string> { SourceName },
+        };
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsParentOf);
+
+        //Assert
+        Assert.DoesNotContain(SourceId, result.ParentsId);
+        Assert.DoesNotContain(SourceName, result.Parents);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_RemovesSourceFromSpouseList_WhenSourceIsSpouseOfTarget()
+    {
+        //Arrange
+        var target = new MeFile
+        {
+            SpouseId = new List<Guid> { SourceId },
+            Spouse = new List<string> { SourceName },
+        };
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsSpouseOf);
+
+        //Assert
+        Assert.DoesNotContain(SourceId, result.SpouseId);
+        Assert.DoesNotContain(SourceName, result.Spouse);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_RemovesSourceFromSiblingsList_WhenSourceIsSiblingOfTarget()
+    {
+        //Arrange
+        var target = new MeFile
+        {
+            SiblingsId = new List<Guid> { SourceId },
+            Siblings = new List<string> { SourceName },
+        };
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsSiblingOf);
+
+        //Assert
+        Assert.DoesNotContain(SourceId, result.SiblingsId);
+        Assert.DoesNotContain(SourceName, result.Siblings);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_ReturnsTargetUnchanged_WhenSourceNotInList()
+    {
+        //Arrange
+        var target = new MeFile();
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsChildOf);
+
+        //Assert
+        Assert.Same(target, result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void RemoveBidirectionalSync_RemovesBothUuidAndName_WhenRemoving()
+    {
+        //Arrange
+        var otherId = Guid.Parse("cccccccc-0000-0000-0000-000000000003");
+        const string OtherName = "Other Person";
+        var target = new MeFile
+        {
+            ChildrenId = new List<Guid> { SourceId, otherId },
+            Children = new List<string> { SourceName, OtherName },
+        };
+
+        //Act
+        var result = RelationshipSyncService.RemoveBidirectionalSync(target, SourceId, RelationshipRole.IsChildOf);
+
+        //Assert
+        Assert.Single(result.ChildrenId);
+        Assert.Single(result.Children);
+        Assert.Contains(otherId, result.ChildrenId);
+        Assert.Contains(OtherName, result.Children);
+        Assert.DoesNotContain(SourceId, result.ChildrenId);
+        Assert.DoesNotContain(SourceName, result.Children);
+    }
+
+    #endregion
 }

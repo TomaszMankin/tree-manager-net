@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TreeManager.App.Mappers;
 using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
@@ -32,6 +34,25 @@ public sealed partial class FamilyTabViewModel : ObservableObject
             picker.LoadPeople(list);
         }
         RecomputeExclusions();
+    }
+
+    public void Reset(MeFile meFile, IReadOnlyList<PersonSummary> allPeople)
+    {
+        Parents.Selected.Clear();
+        Children.Selected.Clear();
+        Spouses.Selected.Clear();
+        Siblings.Selected.Clear();
+
+        LoadPeople(allPeople);
+
+        var temp = meFile.ToFamilyTabViewModel();
+
+        foreach (var p in temp.Parents.Selected) { Parents.Selected.Add(p); }
+        foreach (var p in temp.Children.Selected) { Children.Selected.Add(p); }
+        foreach (var p in temp.Spouses.Selected) { Spouses.Selected.Add(p); }
+        foreach (var p in temp.Siblings.Selected) { Siblings.Selected.Add(p); }
+
+        LoadedPersonId = meFile.UniqueIdentifier;
     }
 
     partial void OnLoadedPersonIdChanged(Guid? value) => RecomputeExclusions();

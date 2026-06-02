@@ -5,4 +5,5 @@ namespace TreeManager.Core.Abstractions.Persistence;
 public interface IPersonRepository
 {
     void Create(MeFile person, string rootPath);
+    void Update(MeFile person, MeFile originalSnapshot, string rootPath);
 }

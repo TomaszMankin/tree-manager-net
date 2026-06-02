@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TreeManager.App.Mappers;
 using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
@@ -38,4 +39,20 @@ public sealed partial class PersonViewModel : ObservableObject
 
     [ObservableProperty]
     private Guid _uniqueIdentifier = Guid.Empty;
+
+    public void Reset(MeFile meFile)
+    {
+        var mapped = meFile.ToViewModel();
+        UniqueIdentifier = mapped.UniqueIdentifier;
+        PersonName = mapped.PersonName;
+        Location = mapped.Location;
+        FirstName = mapped.FirstName;
+        OtherFirstNames = mapped.OtherFirstNames;
+        LastName = mapped.LastName;
+        OtherLastNames = mapped.OtherLastNames;
+        MaidenName = mapped.MaidenName;
+        OtherMaidenNames = mapped.OtherMaidenNames;
+        HasMaidenName = mapped.HasMaidenName;
+        Sex = mapped.Sex;
+    }
 }

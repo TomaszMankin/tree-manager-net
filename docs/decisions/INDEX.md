@@ -11,3 +11,5 @@
 | 007 | IPersonDirectoryService: dedicated Core abstraction for tree-wide person listing | Accepted | 2026-05-28 |
 | 008 | MultiPersonPicker data shape: recompute-and-rebind | Accepted | 2026-05-28 |
 | 009 | Save orchestration | Accepted | 2026-05-30 |
+| 010 | Load and edit flow | Accepted | 2026-05-30 |
+| 011 | Relationship display-name propagation on update | Accepted | 2026-05-31 |

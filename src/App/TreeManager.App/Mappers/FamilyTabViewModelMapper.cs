@@ -7,6 +7,37 @@ namespace TreeManager.App.Mappers;
 
 public static class FamilyTabViewModelMapper
 {
+    public static FamilyTabViewModel ToFamilyTabViewModel(this MeFile meFile)
+    {
+        ArgumentNullException.ThrowIfNull(meFile);
+
+        var vm = new FamilyTabViewModel();
+
+        foreach (var (id, name) in meFile.ParentsId.Zip(meFile.Parents))
+        {
+            vm.Parents.Selected.Add(new PersonSummary(id, name));
+        }
+
+        foreach (var (id, name) in meFile.ChildrenId.Zip(meFile.Children))
+        {
+            vm.Children.Selected.Add(new PersonSummary(id, name));
+        }
+
+        foreach (var (id, name) in meFile.SpouseId.Zip(meFile.Spouse))
+        {
+            vm.Spouses.Selected.Add(new PersonSummary(id, name));
+        }
+
+        foreach (var (id, name) in meFile.SiblingsId.Zip(meFile.Siblings))
+        {
+            vm.Siblings.Selected.Add(new PersonSummary(id, name));
+        }
+
+        vm.LoadedPersonId = meFile.UniqueIdentifier;
+
+        return vm;
+    }
+
     public static MeFile ToMeFile(this FamilyTabViewModel vm, MeFile existing = null)
     {
         ArgumentNullException.ThrowIfNull(vm);

@@ -30,50 +30,16 @@ public static class RelationshipSyncService
         switch (roleSourceHoldsForTarget)
         {
             case RelationshipRole.IsChildOf:
-                // Saved person is a child of target → target should list saved person in its Children
-                if (target.ChildrenId.Contains(sourceId))
-                {
-                    return target;
-                }
-                return target with
-                {
-                    ChildrenId = AppendId(target.ChildrenId, sourceId),
-                    Children = AppendName(target.Children, sourceName),
-                };
+                return AddChild(target, sourceId, sourceName);
 
             case RelationshipRole.IsParentOf:
-                // Saved person is a parent of target → target should list saved person in its Parents
-                if (target.ParentsId.Contains(sourceId))
-                {
-                    return target;
-                }
-                return target with
-                {
-                    ParentsId = AppendId(target.ParentsId, sourceId),
-                    Parents = AppendName(target.Parents, sourceName),
-                };
+                return AddParent(target, sourceId, sourceName);
 
             case RelationshipRole.IsSpouseOf:
-                if (target.SpouseId.Contains(sourceId))
-                {
-                    return target;
-                }
-                return target with
-                {
-                    SpouseId = AppendId(target.SpouseId, sourceId),
-                    Spouse = AppendName(target.Spouse, sourceName),
-                };
+                return AddSpouse(target, sourceId, sourceName);
 
             case RelationshipRole.IsSiblingOf:
-                if (target.SiblingsId.Contains(sourceId))
-                {
-                    return target;
-                }
-                return target with
-                {
-                    SiblingsId = AppendId(target.SiblingsId, sourceId),
-                    Siblings = AppendName(target.Siblings, sourceName),
-                };
+                return AddSibling(target, sourceId, sourceName);
 
             default:
                 return target;
@@ -104,6 +70,46 @@ public static class RelationshipSyncService
         };
     }
 
+    private static MeFile AddChild(MeFile target, Guid id, string name)
+    {
+        if (target.ChildrenId.Contains(id)) { return target; }
+        return target with
+        {
+            ChildrenId = AppendId(target.ChildrenId, id),
+            Children = AppendName(target.Children, name),
+        };
+    }
+
+    private static MeFile AddParent(MeFile target, Guid id, string name)
+    {
+        if (target.ParentsId.Contains(id)) { return target; }
+        return target with
+        {
+            ParentsId = AppendId(target.ParentsId, id),
+            Parents = AppendName(target.Parents, name),
+        };
+    }
+
+    private static MeFile AddSpouse(MeFile target, Guid id, string name)
+    {
+        if (target.SpouseId.Contains(id)) { return target; }
+        return target with
+        {
+            SpouseId = AppendId(target.SpouseId, id),
+            Spouse = AppendName(target.Spouse, name),
+        };
+    }
+
+    private static MeFile AddSibling(MeFile target, Guid id, string name)
+    {
+        if (target.SiblingsId.Contains(id)) { return target; }
+        return target with
+        {
+            SiblingsId = AppendId(target.SiblingsId, id),
+            Siblings = AppendName(target.Siblings, name),
+        };
+    }
+
     private static List<Guid> AppendId(List<Guid> existing, Guid id)
     {
         var result = new List<Guid>(existing) { id };
@@ -113,6 +119,88 @@ public static class RelationshipSyncService
     private static List<string> AppendName(List<string> existing, string name)
     {
         var result = new List<string>(existing) { name };
+        return result;
+    }
+
+    /// <summary>
+    /// Removes <paramref name="sourceId"/> from <paramref name="target"/> according to
+    /// <paramref name="roleSourceHoldsForTarget"/>. Returns the same reference when nothing changed;
+    /// returns a new record when an entry was removed.
+    /// </summary>
+    public static MeFile RemoveBidirectionalSync(
+        MeFile target,
+        Guid sourceId,
+        RelationshipRole roleSourceHoldsForTarget)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        switch (roleSourceHoldsForTarget)
+        {
+            case RelationshipRole.IsChildOf:
+                return RemoveChild(target, sourceId);
+
+            case RelationshipRole.IsParentOf:
+                return RemoveParent(target, sourceId);
+
+            case RelationshipRole.IsSpouseOf:
+                return RemoveSpouse(target, sourceId);
+
+            case RelationshipRole.IsSiblingOf:
+                return RemoveSibling(target, sourceId);
+
+            default:
+                return target;
+        }
+    }
+
+    private static MeFile RemoveChild(MeFile target, Guid id)
+    {
+        var idx = target.ChildrenId.IndexOf(id);
+        if (idx < 0) { return target; }
+        return target with
+        {
+            ChildrenId = RemoveAt(target.ChildrenId, idx),
+            Children = RemoveAt(target.Children, idx),
+        };
+    }
+
+    private static MeFile RemoveParent(MeFile target, Guid id)
+    {
+        var idx = target.ParentsId.IndexOf(id);
+        if (idx < 0) { return target; }
+        return target with
+        {
+            ParentsId = RemoveAt(target.ParentsId, idx),
+            Parents = RemoveAt(target.Parents, idx),
+        };
+    }
+
+    private static MeFile RemoveSpouse(MeFile target, Guid id)
+    {
+        var idx = target.SpouseId.IndexOf(id);
+        if (idx < 0) { return target; }
+        return target with
+        {
+            SpouseId = RemoveAt(target.SpouseId, idx),
+            Spouse = RemoveAt(target.Spouse, idx),
+        };
+    }
+
+    private static MeFile RemoveSibling(MeFile target, Guid id)
+    {
+        var idx = target.SiblingsId.IndexOf(id);
+        if (idx < 0) { return target; }
+        return target with
+        {
+            SiblingsId = RemoveAt(target.SiblingsId, idx),
+            Siblings = RemoveAt(target.Siblings, idx),
+        };
+    }
+
+    private static List<T> RemoveAt<T>(List<T> source, int index)
+    {
+        var result = new List<T>(source);
+        result.RemoveAt(index);
         return result;
     }
 
