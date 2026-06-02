@@ -113,6 +113,7 @@ public class MainViewModelTests
 
         //Act — switch back to Add mode
         _sut.SwitchModeCommand.Execute(AppMode.Add);
+        AddOneRelationship();
         _sut.SaveCommand.Execute(null);
 
         //Assert — should call Create (snapshot cleared), not Update
@@ -142,6 +143,7 @@ public class MainViewModelTests
         //Arrange
         _sut.Person.FirstName = "Jan";
         _sut.Person.LastName = "Kowalski";
+        AddOneRelationship();
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -169,6 +171,7 @@ public class MainViewModelTests
         //Arrange
         _sut.Person.FirstName = "Maria";
         _sut.Person.LastName = "Kowalska";
+        AddOneRelationship();
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -184,6 +187,7 @@ public class MainViewModelTests
     {
         //Arrange
         _sut.Person.UniqueIdentifier = Guid.Empty;
+        AddOneRelationship();
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -202,6 +206,7 @@ public class MainViewModelTests
         _mockPersonRepository
             .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
             .Throws<IOException>();
+        AddOneRelationship();
 
         //Act + Assert — must not throw; IsBusy must be reset
         _sut.SaveCommand.Execute(null);
@@ -225,6 +230,7 @@ public class MainViewModelTests
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
         _sut.OpenPersonCommand.Execute(null);
+        AddOneRelationship();
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -239,6 +245,8 @@ public class MainViewModelTests
     public void Save_CallsRepositoryCreate_WhenOriginalSnapshotIsNull()
     {
         //Arrange — no load performed; snapshot is null
+        AddOneRelationship();
+
         //Act
         _sut.SaveCommand.Execute(null);
 
@@ -255,6 +263,7 @@ public class MainViewModelTests
         _mockPersonRepository
             .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
             .Throws<IOException>();
+        AddOneRelationship();
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -269,6 +278,7 @@ public class MainViewModelTests
     public void Save_ClearsErrorMessage_OnSuccessfulSave()
     {
         //Arrange — first make a failing save to set ErrorMessage
+        AddOneRelationship();
         _mockPersonRepository
             .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
             .Throws<IOException>();
@@ -314,6 +324,7 @@ public class MainViewModelTests
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
         _sut.OpenPersonCommand.Execute(null);
+        AddOneRelationship();
 
         //Act — save once
         _sut.SaveCommand.Execute(null);
@@ -322,6 +333,34 @@ public class MainViewModelTests
 
         //Assert — Update called twice (not with stale original each time)
         _mockPersonRepository.Verify(x => x.Update(It.IsAny<MeFile>(), It.IsAny<MeFile>(), FakeRoot), Times.Exactly(2));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_DoesNotSave_WhenNoRelationshipsSelected()
+    {
+        //Arrange — default _sut has no relationships in any picker
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_Saves_WhenAtLeastOneRelationshipSelected()
+    {
+        //Arrange
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
     }
 
     #endregion
@@ -434,4 +473,9 @@ public class MainViewModelTests
     }
 
     #endregion
+
+    private void AddOneRelationship()
+    {
+        _sut.Family.Parents.Selected.Add(new PersonSummary(Guid.NewGuid(), "Testowy Rodzic"));
+    }
 }

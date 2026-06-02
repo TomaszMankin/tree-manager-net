@@ -108,6 +108,17 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
+            var totalRelationships =
+                Family.Parents.Selected.Count +
+                Family.Children.Selected.Count +
+                Family.Spouses.Selected.Count +
+                Family.Siblings.Selected.Count;
+            if (totalRelationships == 0)
+            {
+                ErrorMessage = "Osoba musi mieć przynajmniej jedną relację.";
+                return;
+            }
+
             var meFile = Person.ToMeFile();
             meFile = Dates.ToMeFile(meFile);
             meFile = Family.ToMeFile(meFile);
