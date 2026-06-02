@@ -23,11 +23,13 @@ public sealed class PersonLoaderService : IPersonLoaderService
         string rootPath,
         PersonViewModel personVm,
         DatesTabViewModel datesVm,
-        FamilyTabViewModel familyVm)
+        FamilyTabViewModel familyVm,
+        NotesTabViewModel notesVm)
     {
         ArgumentNullException.ThrowIfNull(personVm);
         ArgumentNullException.ThrowIfNull(datesVm);
         ArgumentNullException.ThrowIfNull(familyVm);
+        ArgumentNullException.ThrowIfNull(notesVm);
 
         var meFile = _processor.ReadMeFile(meFilePath);
         var allPeople = _directoryService.GetAll(rootPath);
@@ -35,6 +37,7 @@ public sealed class PersonLoaderService : IPersonLoaderService
         personVm.Reset(meFile);
         datesVm.Reset(meFile);
         familyVm.Reset(meFile, allPeople);
+        notesVm.Reset(meFile);
 
         return meFile;
     }

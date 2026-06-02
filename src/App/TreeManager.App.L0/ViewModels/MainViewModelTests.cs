@@ -20,6 +20,8 @@ public class MainViewModelTests
     private readonly Mock<IPersonDirectoryService> _mockDirectoryService;
     private readonly Mock<IPersonPickerService> _mockPickerService;
     private readonly Mock<IPersonLoaderService> _mockLoaderService;
+    private readonly Mock<IDirtyTracker> _mockDirtyTracker;
+    private readonly Mock<IDirtyGuardService> _mockDirtyGuard;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -30,19 +32,27 @@ public class MainViewModelTests
         _mockDirectoryService = new Mock<IPersonDirectoryService>();
         _mockPickerService = new Mock<IPersonPickerService>();
         _mockLoaderService = new Mock<IPersonLoaderService>();
+        _mockDirtyTracker = new Mock<IDirtyTracker>();
+        _mockDirtyGuard = new Mock<IDirtyGuardService>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
 
+        // Default: not dirty — existing tests proceed unchanged
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
+
         var deps = new PersonEditDependencies(
             _mockDirectoryService.Object,
             _mockPickerService.Object,
-            _mockLoaderService.Object);
+            _mockLoaderService.Object,
+            _mockDirtyTracker.Object,
+            _mockDirtyGuard.Object);
 
         _sut = new MainViewModel(
             new PersonViewModel(),
             new DatesTabViewModel(),
             new FamilyTabViewModel(),
+            new NotesTabViewModel(),
             _mockPersonRepository.Object,
             _mockRootPointerStore.Object,
             deps,
@@ -104,7 +114,7 @@ public class MainViewModelTests
             .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
             .Returns(selectedPerson);
         _mockLoaderService
-            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()))
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
             .Returns(loadedMeFile);
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRoot))
@@ -119,6 +129,53 @@ public class MainViewModelTests
         //Assert — should call Create (snapshot cleared), not Update
         _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), FakeRoot), Times.Once());
         _mockPersonRepository.Verify(x => x.Update(It.IsAny<MeFile>(), It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_DoesNotSwitch_WhenDirtyAndUserCancels()
+    {
+        //Arrange — simulate loaded person, then mark dirty
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert — mode unchanged (was EditTree after load)
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_Switches_WhenDirtyAndUserConfirmsDiscard()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(true);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_DoesNotShowGuard_WhenNotDirty()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert — guard never called
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Never());
     }
 
     #endregion
@@ -224,7 +281,7 @@ public class MainViewModelTests
             .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
             .Returns(selectedPerson);
         _mockLoaderService
-            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()))
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
             .Returns(loadedMeFile);
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRoot))
@@ -318,7 +375,7 @@ public class MainViewModelTests
             .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
             .Returns(selectedPerson);
         _mockLoaderService
-            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()))
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
             .Returns(loadedMeFile);
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRoot))
@@ -363,6 +420,23 @@ public class MainViewModelTests
         _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_IncludesNotes_WhenSaving()
+    {
+        //Arrange
+        _sut.Notes.Notes = "Ważna notatka";
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(
+            x => x.Create(It.Is<MeFile>(m => m.Notes == "Ważna notatka"), FakeRoot),
+            Times.Once());
+    }
+
     #endregion
 
     #region OpenPerson
@@ -378,7 +452,7 @@ public class MainViewModelTests
             .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
             .Returns(selectedPerson);
         _mockLoaderService
-            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()))
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
             .Returns(loadedMeFile);
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRoot))
@@ -408,7 +482,7 @@ public class MainViewModelTests
 
         //Assert — loader not called; mode unchanged
         _mockLoaderService.Verify(
-            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()),
+            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()),
             Times.Never());
         Assert.Equal(AppMode.Add, _sut.CurrentMode);
     }
@@ -425,7 +499,7 @@ public class MainViewModelTests
 
         //Assert
         _mockLoaderService.Verify(
-            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()),
+            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()),
             Times.Never());
     }
 
@@ -442,7 +516,7 @@ public class MainViewModelTests
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
         _mockLoaderService
-            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>()))
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
             .Throws<InvalidOperationException>();
 
         //Act
@@ -452,6 +526,128 @@ public class MainViewModelTests
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
         Assert.False(_sut.IsBusy);
         _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_DoesNotShowGuard_WhenNotDirty()
+    {
+        //Arrange
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
+        SetupPickerAndLoader();
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert — guard never called
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_ShowsGuard_WhenDirty()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(true);
+        SetupPickerAndLoader();
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert — guard called exactly once
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_DoesNotLoad_WhenDirtyAndUserCancels()
+    {
+        //Arrange — first load to have a snapshot
+        SimulateLoadedPerson();
+        var loaderCallCount = 0;
+
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+
+        var secondPerson = new PersonSummary(Guid.NewGuid(), "Anna Nowak");
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns(secondPerson);
+        _mockLoaderService
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
+            .Callback(() => loaderCallCount++)
+            .Returns(new MeFile());
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert — loader not called again; mode unchanged
+        Assert.Equal(0, loaderCallCount);
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_Loads_WhenDirtyAndUserConfirmsDiscard()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(true);
+
+        var secondPerson = new PersonSummary(Guid.NewGuid(), "Anna Nowak");
+        var secondMeFile = new MeFile { UniqueIdentifier = secondPerson.UniqueIdentifier };
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns(secondPerson);
+        _mockLoaderService
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
+            .Returns(secondMeFile);
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert — loader called twice total (first load + second load)
+        _mockLoaderService.Verify(
+            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_ShowsGuard_WhenDirtyOnAddPath()
+    {
+        //Arrange — no SimulateLoadedPerson; snapshot stays null
+        _mockDirtyTracker.Setup(x => x.IsDirty(null, It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.EditTree);
+
+        //Assert — mode did not change; guard was invoked
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_ShowsGuard_WhenDirtyOnAddPath()
+    {
+        //Arrange — no prior load; snapshot stays null
+        _mockDirtyTracker.Setup(x => x.IsDirty(null, It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+        SetupPickerAndLoader();
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert — navigation blocked; guard invoked once
+        _mockLoaderService.Verify(
+            x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()),
+            Times.Never());
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Once());
     }
 
     #endregion
@@ -477,5 +673,36 @@ public class MainViewModelTests
     private void AddOneRelationship()
     {
         _sut.Family.Parents.Selected.Add(new PersonSummary(Guid.NewGuid(), "Testowy Rodzic"));
+    }
+
+    private void SimulateLoadedPerson()
+    {
+        var selectedPerson = new PersonSummary(Guid.NewGuid(), "Jan Kowalski");
+        var loadedMeFile = new MeFile { UniqueIdentifier = selectedPerson.UniqueIdentifier, PersonName = "Jan Kowalski" };
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns(selectedPerson);
+        _mockLoaderService
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
+            .Returns(loadedMeFile);
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary>());
+        _sut.OpenPersonCommand.Execute(null);
+    }
+
+    private void SetupPickerAndLoader()
+    {
+        var selectedPerson = new PersonSummary(Guid.NewGuid(), "Anna Nowak");
+        var loadedMeFile = new MeFile { UniqueIdentifier = selectedPerson.UniqueIdentifier };
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns(selectedPerson);
+        _mockLoaderService
+            .Setup(x => x.Load(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PersonViewModel>(), It.IsAny<DatesTabViewModel>(), It.IsAny<FamilyTabViewModel>(), It.IsAny<NotesTabViewModel>()))
+            .Returns(loadedMeFile);
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary>());
     }
 }

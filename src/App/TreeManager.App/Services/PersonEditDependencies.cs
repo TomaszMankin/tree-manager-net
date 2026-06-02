@@ -5,4 +5,6 @@ namespace TreeManager.App.Services;
 public sealed record PersonEditDependencies(
     IPersonDirectoryService DirectoryService,
     IPersonPickerService PickerService,
-    IPersonLoaderService LoaderService);
+    IPersonLoaderService LoaderService,
+    IDirtyTracker DirtyTracker,
+    IDirtyGuardService DirtyGuard);

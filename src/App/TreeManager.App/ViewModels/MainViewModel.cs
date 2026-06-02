@@ -18,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
     public FamilyTabViewModel Family { get; }
+    public NotesTabViewModel Notes { get; }
 
     private readonly IPersonRepository _personRepository;
     private readonly IRootPointerStore _rootPointerStore;
@@ -30,6 +31,7 @@ public sealed partial class MainViewModel : ObservableObject
         PersonViewModel person,
         DatesTabViewModel dates,
         FamilyTabViewModel family,
+        NotesTabViewModel notes,
         IPersonRepository personRepository,
         IRootPointerStore rootPointerStore,
         PersonEditDependencies editDeps,
@@ -38,6 +40,7 @@ public sealed partial class MainViewModel : ObservableObject
         Person = person;
         Dates = dates;
         Family = family;
+        Notes = notes;
         _personRepository = personRepository;
         _rootPointerStore = rootPointerStore;
         _editDeps = editDeps;
@@ -56,6 +59,20 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SwitchMode(AppMode targetMode)
     {
+        if (targetMode == CurrentMode)
+        {
+            return;
+        }
+
+        var current = AssembleCurrentMeFile();
+        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
+        {
+            if (!_editDeps.DirtyGuard.ConfirmDiscard())
+            {
+                return;
+            }
+        }
+
         if (targetMode == AppMode.Add)
         {
             _originalSnapshot = null;
@@ -81,10 +98,19 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
+        var currentSnapshot = AssembleCurrentMeFile();
+        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, currentSnapshot))
+        {
+            if (!_editDeps.DirtyGuard.ConfirmDiscard())
+            {
+                return;
+            }
+        }
+
         try
         {
             var meFilePath = Path.Combine(rootPath, PeopleListFolderName, selected.DisplayName, "me.json");
-            _originalSnapshot = _editDeps.LoaderService.Load(meFilePath, rootPath, Person, Dates, Family);
+            _originalSnapshot = _editDeps.LoaderService.Load(meFilePath, rootPath, Person, Dates, Family, Notes);
             CurrentMode = AppMode.EditTree;
             ErrorMessage = string.Empty;
         }
@@ -119,9 +145,7 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
-            var meFile = Person.ToMeFile();
-            meFile = Dates.ToMeFile(meFile);
-            meFile = Family.ToMeFile(meFile);
+            var meFile = AssembleCurrentMeFile();
 
             if (meFile.UniqueIdentifier == Guid.Empty)
             {
@@ -154,5 +178,14 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    private MeFile AssembleCurrentMeFile()
+    {
+        var meFile = Person.ToMeFile();
+        meFile = Dates.ToMeFile(meFile);
+        meFile = Family.ToMeFile(meFile);
+        meFile = Notes.ToMeFile(meFile);
+        return meFile;
     }
 }

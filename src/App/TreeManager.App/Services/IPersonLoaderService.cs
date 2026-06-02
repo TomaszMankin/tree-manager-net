@@ -10,5 +10,6 @@ public interface IPersonLoaderService
         string rootPath,
         PersonViewModel personVm,
         DatesTabViewModel datesVm,
-        FamilyTabViewModel familyVm);
+        FamilyTabViewModel familyVm,
+        NotesTabViewModel notesVm);
 }
