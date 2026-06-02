@@ -90,7 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "OpenPerson failed to load {Person}", selected.DisplayName);
+            _log.Error(ex, "OpenPerson failed to load {Person}", selected.DisplayName);
             ErrorMessage = "Nie udało się wczytać osoby. Spróbuj ponownie.";
         }
     }
@@ -147,7 +147,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "Save failed");
+            _log.Error(ex, "Save failed");
             ErrorMessage = "Zapis nie powiódł się. Spróbuj ponownie.";
         }
         finally

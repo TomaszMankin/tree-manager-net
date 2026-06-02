@@ -270,7 +270,7 @@ public class MainViewModelTests
 
         //Assert
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
-        _mockLog.Verify(x => x.Warning(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
+        _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
     }
 
     [Fact]
@@ -451,7 +451,7 @@ public class MainViewModelTests
         //Assert
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
         Assert.False(_sut.IsBusy);
-        _mockLog.Verify(x => x.Warning(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+        _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
     }
 
     #endregion
