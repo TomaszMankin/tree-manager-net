@@ -26,8 +26,13 @@
                             Command="{Binding OpenPersonCommand}"
                             Margin="4,0" Padding="14,8"/>
                     <Button Content="Edytuj szkic"
-                            Command="{Binding SwitchModeCommand}"
-                            CommandParameter="{x:Static vm:AppMode.EditDraft}"
+                            Command="{Binding LoadDraftCommand}"
+                            Margin="4,0" Padding="14,8"/>
+                    <Button Content="Zapisz szkic"
+                            Command="{Binding SaveAsDraftCommand}"
+                            Margin="4,0" Padding="14,8"/>
+                    <Button Content="Przenieś do drzewa"
+                            Command="{Binding PromoteDraftCommand}"
                             Margin="4,0" Padding="14,8"/>
                 </StackPanel>
             </Grid>

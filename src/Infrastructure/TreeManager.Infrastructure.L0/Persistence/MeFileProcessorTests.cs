@@ -242,6 +242,33 @@ public class MeFileProcessorTests
 
     #endregion
 
+    #region ScanIsolation
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ScanMeFiles_DoesNotReturnDrafts_WhenDraftsExistInPoczekalnia()
+    {
+        //Arrange — Lista osób has one person; sibling Poczekalnia has one draft
+        var draftMeJson = @"C:\fake\root\Poczekalnia\Jan Szkic\me.json";
+
+        _fs.Setup(x => x.DirectoryExists(PeopleListPath)).Returns(true);
+        _fs.Setup(x => x.EnumerateDirectories(PeopleListPath)).Returns(new[] { AnnaFolder });
+        _fs.Setup(x => x.FileExists(AnnaMeJson)).Returns(true);
+        // Draft folder and file exist at sibling path — but scan must not visit them
+        _fs.Setup(x => x.FileExists(draftMeJson)).Returns(true);
+
+        //Act
+        var result = _sut.ScanMeFiles(RootPath).ToList();
+
+        //Assert — only Lista osób me.json returned; no Poczekalnia path
+        Assert.Single(result);
+        Assert.Contains(AnnaMeJson, result);
+        Assert.DoesNotContain(draftMeJson, result);
+        Assert.All(result, path => Assert.Contains("Lista osób", path));
+    }
+
+    #endregion
+
     #region Roundtrip
 
     [Fact]

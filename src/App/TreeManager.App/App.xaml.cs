@@ -6,6 +6,7 @@ using TreeManager.App.ViewModels;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Settings;
+using TreeManager.Core.Services;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
@@ -55,6 +56,8 @@ public partial class App : Application
         services.AddSingleton<IPersonPickerService, PersonPickerService>();
         services.AddSingleton<IDirtyTracker, DirtyTracker>();
         services.AddSingleton<IDirtyGuardService, DirtyGuardService>();
+        services.AddSingleton<IDraftRepository, DraftRepository>();
+        services.AddSingleton<IDraftPromoter, DraftPromoter>();
         services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
