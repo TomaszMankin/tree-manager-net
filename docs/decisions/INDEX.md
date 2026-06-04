@@ -13,3 +13,4 @@
 | 009 | Save orchestration | Accepted | 2026-05-30 |
 | 010 | Load and edit flow | Accepted | 2026-05-30 |
 | 011 | Relationship display-name propagation on update | Accepted | 2026-05-31 |
+| 012 | Dirty-tracking strategy — snapshot equality | Accepted | 2026-06-02 |

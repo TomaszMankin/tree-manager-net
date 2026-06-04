@@ -19,6 +19,7 @@ public class PersonLoaderServiceTests
     private readonly PersonViewModel _personVm;
     private readonly DatesTabViewModel _datesVm;
     private readonly FamilyTabViewModel _familyVm;
+    private readonly NotesTabViewModel _notesVm;
     private readonly PersonLoaderService _sut;
 
     public PersonLoaderServiceTests()
@@ -28,6 +29,7 @@ public class PersonLoaderServiceTests
         _personVm = new PersonViewModel();
         _datesVm = new DatesTabViewModel();
         _familyVm = new FamilyTabViewModel();
+        _notesVm = new NotesTabViewModel();
 
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRootPath))
@@ -55,7 +57,7 @@ public class PersonLoaderServiceTests
         _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
 
         //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         Assert.Equal(id, _personVm.UniqueIdentifier);
@@ -73,7 +75,7 @@ public class PersonLoaderServiceTests
         _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
 
         //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         Assert.Equal("15", _datesVm.BirthDate.Day);
@@ -98,7 +100,7 @@ public class PersonLoaderServiceTests
             .Returns(new List<PersonSummary> { new PersonSummary(parentId, "Anna Nowak") });
 
         //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         Assert.Single(_familyVm.Parents.Selected);
@@ -115,7 +117,7 @@ public class PersonLoaderServiceTests
         _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
 
         //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         Assert.Equal(id, _familyVm.LoadedPersonId);
@@ -130,7 +132,7 @@ public class PersonLoaderServiceTests
         _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
 
         //Act
-        var result = _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        var result = _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         Assert.Same(meFile, result);
@@ -145,10 +147,25 @@ public class PersonLoaderServiceTests
         _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
 
         //Act
-        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm);
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
 
         //Assert
         _mockDirectoryService.Verify(x => x.GetAll(FakeRootPath), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Load_PopulatesNotes_WhenMeFileHasNotes()
+    {
+        //Arrange
+        var meFile = new MeFile { Notes = "Notatka o osobie" };
+        _mockProcessor.Setup(x => x.ReadMeFile(FakeMeFilePath)).Returns(meFile);
+
+        //Act
+        _sut.Load(FakeMeFilePath, FakeRootPath, _personVm, _datesVm, _familyVm, _notesVm);
+
+        //Assert
+        Assert.Equal("Notatka o osobie", _notesVm.Notes);
     }
 
     #endregion

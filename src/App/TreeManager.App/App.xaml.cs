@@ -53,6 +53,8 @@ public partial class App : Application
         services.AddSingleton<IRootPickerService, RootPickerService>();
         services.AddSingleton<IPersonLoaderService, PersonLoaderService>();
         services.AddSingleton<IPersonPickerService, PersonPickerService>();
+        services.AddSingleton<IDirtyTracker, DirtyTracker>();
+        services.AddSingleton<IDirtyGuardService, DirtyGuardService>();
         services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
@@ -60,6 +62,7 @@ public partial class App : Application
         services.AddTransient<DatesTabViewModel>();
         services.AddTransient<FamilyTabViewModel>();
         services.AddTransient<PersonViewModel>();
+        services.AddTransient<NotesTabViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();
 

@@ -1,0 +1,24 @@
+<UserControl x:Class="TreeManager.App.Views.NotesTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TreeManager.App.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:NotesTabViewModel}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,24" MaxWidth="580" HorizontalAlignment="Left">
+
+            <TextBlock Text="Notatki" Style="{StaticResource SectionHeader}"/>
+
+            <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     MinHeight="200"
+                     Padding="6,4"
+                     FontSize="13"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
