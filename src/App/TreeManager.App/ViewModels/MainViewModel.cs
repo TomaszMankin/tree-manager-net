@@ -17,6 +17,9 @@ public sealed partial class MainViewModel : ObservableObject
     private const string PeopleListFolderName = "Lista osób";
     private const string GenerateFolderTreeSuccessTemplate = "Wygenerowano drzewo: {0} skrótów.";
     private const string GenerateFolderTreeErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
+    private const string GenerateLineageSuccessTemplate = "Wygenerowano rody: {0} skrótów.";
+    private const string GenerateLineageErrorMessage = "Nie udało się wygenerować rodów. Spróbuj ponownie.";
+    private const string GenerateLineageIntegrityErrorMessage = "Błąd integralności drzewa. Dane zostały zmienione poza aplikacją.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -320,6 +323,49 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _log.Error(ex, "GenerateFolderTree failed");
             ErrorMessage = GenerateFolderTreeErrorMessage;
+            StatusMessage = string.Empty;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void GenerateLineageFolders()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("GenerateLineageFolders called with empty root path");
+            return;
+        }
+
+        var people = _editDeps.DirectoryService.GetAll(rootPath);
+        var selected = _editDeps.PickerService.PickPerson(people);
+        if (selected == null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
+            var result = _folderTreeDeps.LineageGenerator.Generate(rootPath, selected.UniqueIdentifier);
+            ErrorMessage = string.Empty;
+            StatusMessage = string.Format(GenerateLineageSuccessTemplate, result.Written);
+        }
+        catch (TreeIntegrityException ex)
+        {
+            _log.Error(ex, "GenerateLineageFolders: tree integrity violation");
+            ErrorMessage = GenerateLineageIntegrityErrorMessage;
+            StatusMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "GenerateLineageFolders failed");
+            ErrorMessage = GenerateLineageErrorMessage;
             StatusMessage = string.Empty;
         }
         finally

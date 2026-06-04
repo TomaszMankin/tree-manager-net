@@ -102,6 +102,34 @@ public static class FolderTreeNaming
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Deduplicates <paramref name="filename"/> against <paramref name="seen"/> by appending a (N) suffix.
+    /// Does NOT add the result to <paramref name="seen"/>; the caller is responsible for that.
+    /// </summary>
+    public static string Deduplicate(string filename, HashSet<string> seen)
+    {
+        if (!seen.Contains(filename))
+        {
+            return filename;
+        }
+
+        string withoutExt = filename.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
+            ? filename[..^4]
+            : filename;
+
+        int n = 2;
+        while (true)
+        {
+            string candidate = $"{withoutExt} ({n}).lnk";
+            if (!seen.Contains(candidate))
+            {
+                return candidate;
+            }
+
+            n++;
+        }
+    }
+
     /// <summary>Encodes a <see cref="FolderTreeMember"/> into the Drzewo shortcut filename.
     /// Format gen==0: [NN][0][gender] FullName.lnk
     /// Format gen!=0: [NN][display][couple-code][gender] FullName.lnk

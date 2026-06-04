@@ -65,6 +65,7 @@ public partial class App : Application
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
         services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
         services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
+        services.AddSingleton<ILineageFolderGenerator, LineageFolderGenerator>();
         services.AddSingleton<FolderTreeCommandDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 

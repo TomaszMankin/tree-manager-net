@@ -92,3 +92,4 @@ $RECYCLE.BIN/
 
 # Claude agentic artifacts
 .pipeline
+.claude/
