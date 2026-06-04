@@ -150,15 +150,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             var meFile = AssembleCurrentMeFile();
-
-            if (meFile.UniqueIdentifier == Guid.Empty)
-            {
-                meFile = meFile with { UniqueIdentifier = Guid.NewGuid() };
-            }
-
-            var folderName = Person.ToFolderName();
-            var personFolderPath = Path.Combine(rootPath, PeopleListFolderName, folderName);
-            meFile = meFile with { PersonName = folderName, Location = personFolderPath };
+            meFile = ApplyIdentityOverlay(meFile, rootPath);
 
             if (_originalSnapshot == null)
             {
@@ -184,12 +176,132 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void SaveAsDraft()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("SaveAsDraft called with empty root path");
+            return;
+        }
+
+        try
+        {
+            var meFile = AssembleCurrentMeFile();
+            meFile = ApplyIdentityOverlay(meFile, rootPath);
+
+            _editDeps.DraftRepository.SaveDraft(meFile, rootPath);
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "SaveAsDraft failed");
+            ErrorMessage = "Nie udało się zapisać szkicu. Spróbuj ponownie.";
+        }
+    }
+
+    [RelayCommand]
+    private void LoadDraft()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("LoadDraft called with empty root path");
+            return;
+        }
+
+        var current = AssembleCurrentMeFile();
+        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
+        {
+            if (!_editDeps.DirtyGuard.ConfirmDiscard())
+            {
+                return;
+            }
+        }
+
+        var drafts = _editDeps.DraftRepository.GetAllDrafts(rootPath);
+        var selected = _editDeps.PickerService.PickPerson(drafts);
+        if (selected == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var draft = _editDeps.DraftRepository.ReadDraft(rootPath, selected.DisplayName);
+            var people = _editDeps.DirectoryService.GetAll(rootPath);
+
+            Person.Reset(draft);
+            Dates.Reset(draft);
+            Family.Reset(draft, people);
+            Notes.Reset(draft);
+
+            _originalSnapshot = draft;
+            CurrentMode = AppMode.EditDraft;
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "LoadDraft failed for {Draft}", selected.DisplayName);
+            ErrorMessage = "Nie udało się wczytać szkicu. Spróbuj ponownie.";
+        }
+    }
+
+    [RelayCommand]
+    private void PromoteDraft()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("PromoteDraft called with empty root path");
+            return;
+        }
+
+        if (CurrentMode != AppMode.EditDraft)
+        {
+            return;
+        }
+
+        try
+        {
+            var meFile = AssembleCurrentMeFile();
+            meFile = ApplyIdentityOverlay(meFile, rootPath);
+
+            _editDeps.DraftPromoter.Promote(meFile, rootPath);
+
+            _originalSnapshot = meFile;
+            Family.LoadedPersonId = meFile.UniqueIdentifier;
+            CurrentMode = AppMode.EditTree;
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "PromoteDraft failed");
+            ErrorMessage = "Nie udało się przenieść szkicu do drzewa. Spróbuj ponownie.";
+        }
+    }
+
     private MeFile AssembleCurrentMeFile()
     {
         var meFile = Person.ToMeFile();
         meFile = Dates.ToMeFile(meFile);
         meFile = Family.ToMeFile(meFile);
         meFile = Notes.ToMeFile(meFile);
+        return meFile;
+    }
+
+    private MeFile ApplyIdentityOverlay(MeFile meFile, string rootPath)
+    {
+        if (meFile.UniqueIdentifier == Guid.Empty)
+        {
+            meFile = meFile with { UniqueIdentifier = Guid.NewGuid() };
+        }
+
+        var folderName = Person.ToFolderName();
+        var personFolderPath = Path.Combine(rootPath, PeopleListFolderName, folderName);
+        meFile = meFile with { PersonName = folderName, Location = personFolderPath };
+
         return meFile;
     }
 }

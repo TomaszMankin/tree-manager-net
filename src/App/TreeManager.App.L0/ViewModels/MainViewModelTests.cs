@@ -22,6 +22,8 @@ public class MainViewModelTests
     private readonly Mock<IPersonLoaderService> _mockLoaderService;
     private readonly Mock<IDirtyTracker> _mockDirtyTracker;
     private readonly Mock<IDirtyGuardService> _mockDirtyGuard;
+    private readonly Mock<IDraftRepository> _mockDraftRepository;
+    private readonly Mock<IDraftPromoter> _mockDraftPromoter;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -34,6 +36,8 @@ public class MainViewModelTests
         _mockLoaderService = new Mock<IPersonLoaderService>();
         _mockDirtyTracker = new Mock<IDirtyTracker>();
         _mockDirtyGuard = new Mock<IDirtyGuardService>();
+        _mockDraftRepository = new Mock<IDraftRepository>();
+        _mockDraftPromoter = new Mock<IDraftPromoter>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
@@ -46,7 +50,9 @@ public class MainViewModelTests
             _mockPickerService.Object,
             _mockLoaderService.Object,
             _mockDirtyTracker.Object,
-            _mockDirtyGuard.Object);
+            _mockDirtyGuard.Object,
+            _mockDraftRepository.Object,
+            _mockDraftPromoter.Object);
 
         _sut = new MainViewModel(
             new PersonViewModel(),
@@ -690,6 +696,219 @@ public class MainViewModelTests
 
     #endregion
 
+    #region SaveAsDraft
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_WritesDraft_WhenInvoked()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftRepository.Verify(
+            x => x.SaveDraft(It.Is<MeFile>(m => m.PersonName == "Jan Kowalski"), FakeRoot),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_AssignsGuid_WhenNew()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+        _sut.Person.UniqueIdentifier = Guid.Empty;
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftRepository.Verify(
+            x => x.SaveDraft(It.Is<MeFile>(m => m.UniqueIdentifier != Guid.Empty), FakeRoot),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_DoesNotApplyRelationshipGate_WhenNoRelationships()
+    {
+        //Arrange — tree has existing people (gate would fire for main-tree Save)
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Existing") });
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert — draft saved with no error; no relationship gate
+        _mockDraftRepository.Verify(x => x.SaveDraft(It.IsAny<MeFile>(), FakeRoot), Times.Once());
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+    }
+
+    #endregion
+
+    #region LoadDraft
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_ShowsGuard_WhenDirty()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert — guard called
+        _mockDirtyGuard.Verify(x => x.ConfirmDiscard(), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_DoesNotLoad_WhenDirtyAndUserCancels()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(true);
+        _mockDirtyGuard.Setup(x => x.ConfirmDiscard()).Returns(false);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert — draft repo never consulted; mode unchanged
+        _mockDraftRepository.Verify(x => x.GetAllDrafts(It.IsAny<string>()), Times.Never());
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_EntersEditDraftMode_WhenDraftSelected()
+    {
+        //Arrange
+        var draftId = Guid.NewGuid();
+        var draftSummary = new PersonSummary(draftId, "Jan Kowalski");
+        var draftMeFile = new MeFile { UniqueIdentifier = draftId, PersonName = "Jan Kowalski" };
+
+        SetupDraftPickAndRead(draftSummary, draftMeFile);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_SetsLoadedPersonId_WhenDraftLoaded()
+    {
+        //Arrange
+        var draftId = Guid.NewGuid();
+        var draftSummary = new PersonSummary(draftId, "Jan Kowalski");
+        var draftMeFile = new MeFile { UniqueIdentifier = draftId, PersonName = "Jan Kowalski" };
+
+        SetupDraftPickAndRead(draftSummary, draftMeFile);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert — Family.Reset sets LoadedPersonId from MeFile
+        Assert.Equal(draftId, _sut.Family.LoadedPersonId);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_DoesNothing_WhenNoDraftSelected()
+    {
+        //Arrange
+        _mockDraftRepository
+            .Setup(x => x.GetAllDrafts(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary>());
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns((PersonSummary)null);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert — mode unchanged; draft not read
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+        _mockDraftRepository.Verify(x => x.ReadDraft(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+    }
+
+    #endregion
+
+    #region PromoteDraft
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_CallsPromoter_WhenInEditDraftMode()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), FakeRoot), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_SwitchesToEditTree_WhenPromoteSucceeds()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_ShowsError_WhenPromoteThrows()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        _mockDraftPromoter
+            .Setup(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_DoesNothing_WhenNotInEditDraftMode()
+    {
+        //Arrange — mode is Add (default)
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+    }
+
+    #endregion
+
     private void AddOneRelationship()
     {
         _sut.Family.Parents.Selected.Add(new PersonSummary(Guid.NewGuid(), "Testowy Rodzic"));
@@ -709,6 +928,31 @@ public class MainViewModelTests
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
         _sut.OpenPersonCommand.Execute(null);
+    }
+
+    private void SimulateLoadedDraft()
+    {
+        var draftId = Guid.NewGuid();
+        var draftSummary = new PersonSummary(draftId, "Jan Kowalski");
+        var draftMeFile = new MeFile { UniqueIdentifier = draftId, PersonName = "Jan Kowalski" };
+        SetupDraftPickAndRead(draftSummary, draftMeFile);
+        _sut.LoadDraftCommand.Execute(null);
+    }
+
+    private void SetupDraftPickAndRead(PersonSummary draftSummary, MeFile draftMeFile)
+    {
+        _mockDraftRepository
+            .Setup(x => x.GetAllDrafts(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary> { draftSummary });
+        _mockPickerService
+            .Setup(x => x.PickPerson(It.IsAny<System.Collections.Generic.IReadOnlyList<PersonSummary>>()))
+            .Returns(draftSummary);
+        _mockDraftRepository
+            .Setup(x => x.ReadDraft(FakeRoot, draftSummary.DisplayName))
+            .Returns(draftMeFile);
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary>());
     }
 
     private void SetupPickerAndLoader()

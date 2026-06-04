@@ -173,7 +173,16 @@ public sealed class PersonRepository : IPersonRepository
         ArgumentNullException.ThrowIfNull(person);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
 
-        var personFolderPath = Path.Combine(rootPath, PeopleListFolderName, person.PersonName);
+        Create(person, rootPath, person.PersonName);
+    }
+
+    public void Create(MeFile person, string rootPath, string folderName)
+    {
+        ArgumentNullException.ThrowIfNull(person);
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderName);
+
+        var personFolderPath = Path.Combine(rootPath, PeopleListFolderName, folderName);
         var meFilePath = Path.Combine(personFolderPath, "me.json");
 
         _fs.CreateDirectory(personFolderPath);

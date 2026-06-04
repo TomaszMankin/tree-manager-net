@@ -7,4 +7,6 @@ public sealed record PersonEditDependencies(
     IPersonPickerService PickerService,
     IPersonLoaderService LoaderService,
     IDirtyTracker DirtyTracker,
-    IDirtyGuardService DirtyGuard);
+    IDirtyGuardService DirtyGuard,
+    IDraftRepository DraftRepository,
+    IDraftPromoter DraftPromoter);
