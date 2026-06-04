@@ -141,8 +141,12 @@ public sealed partial class MainViewModel : ObservableObject
                 Family.Siblings.Selected.Count;
             if (totalRelationships == 0)
             {
-                ErrorMessage = "Osoba musi mieć przynajmniej jedną relację.";
-                return;
+                var existingPeople = _editDeps.DirectoryService.GetAll(rootPath);
+                if (existingPeople.Count > 0)
+                {
+                    ErrorMessage = "Osoba musi mieć przynajmniej jedną relację.";
+                    return;
+                }
             }
 
             var meFile = AssembleCurrentMeFile();

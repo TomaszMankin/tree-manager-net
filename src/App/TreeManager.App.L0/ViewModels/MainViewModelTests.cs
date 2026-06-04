@@ -396,7 +396,10 @@ public class MainViewModelTests
     [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Save_DoesNotSave_WhenNoRelationshipsSelected()
     {
-        //Arrange — default _sut has no relationships in any picker
+        //Arrange — tree has existing people so the guard fires
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Existing") });
 
         //Act
         _sut.SaveCommand.Execute(null);
@@ -418,6 +421,23 @@ public class MainViewModelTests
 
         //Assert
         _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_Saves_WhenNoRelationshipsButTreeIsEmpty()
+    {
+        //Arrange — tree has no existing people; first person needs no relations
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new System.Collections.Generic.List<PersonSummary>());
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), FakeRoot), Times.Once());
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
     }
 
     [Fact]
