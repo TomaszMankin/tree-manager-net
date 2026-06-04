@@ -29,7 +29,7 @@ public class ShellLinkShortcutCreatorIntegrationTests : IDisposable
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L1)]
-    public void Create_WritesResolvableLnk_WhenTargetIsPolishName()
+    public void Create_WritesResolvableLnk_WhenTargetHasDiacritics()
     {
         //Arrange
         var targetDir = Path.Combine(_tempDir, "Władysław Łęczycki");
@@ -45,7 +45,7 @@ public class ShellLinkShortcutCreatorIntegrationTests : IDisposable
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L1)]
-    public void Create_PreservesPolishDiacritics_WhenResolvedViaGetPath()
+    public void Create_PreservesDiacritics_WhenResolvedViaGetPath()
     {
         //Arrange
         var targetDir = Path.Combine(_tempDir, "Władysław Łęczycki");
@@ -62,5 +62,22 @@ public class ShellLinkShortcutCreatorIntegrationTests : IDisposable
         Assert.Equal(expected, actual, StringComparer.OrdinalIgnoreCase);
         // Diacritics must survive byte-for-byte: compare the raw path string ignoring case
         Assert.Contains("Władysław Łęczycki", resolvedPath);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L1)]
+    public void Create_PreservesHighCodepointDiacritics_WhenNameHasZolcLodz()
+    {
+        //Arrange
+        var targetDir = Path.Combine(_tempDir, "Żółć Łódź");
+        Directory.CreateDirectory(targetDir);
+        var lnkPath = Path.Combine(_tempDir, "ZolcLodzTest.lnk");
+
+        //Act
+        _sut.Create(targetDir, lnkPath);
+        var resolvedPath = ShellLinkShortcutCreator.Resolve(lnkPath);
+
+        //Assert
+        Assert.Contains("Żółć Łódź", resolvedPath);
     }
 }

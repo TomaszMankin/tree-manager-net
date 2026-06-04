@@ -172,7 +172,7 @@ public class DrzewoFilenameTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void RenderFilename_KeepsPolishDiacritics_WhenNameHasLeczycki()
+    public void RenderFilename_KeepsDiacritics_WhenNameHasLeczycki()
     {
         //Arrange
         var member = BuildMember(gen: 0, coupleIndex: 0, total: 1, gender: "M", fullName: "Władysław Łęczycki");

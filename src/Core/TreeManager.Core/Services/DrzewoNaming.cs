@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using TreeManager.Core.Domain;
 
@@ -9,7 +10,6 @@ namespace TreeManager.Core.Services;
 public static class DrzewoNaming
 {
     private const string UnknownSentinel = "(nieznane)";
-    private static readonly char[] ForbiddenChars = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
 
     /// <summary>Returns the gender token (M/F) for a <see cref="Sex"/> value.</summary>
     public static string GenderToken(Sex sex)
@@ -93,19 +93,11 @@ public static class DrzewoNaming
     public static string Sanitize(string name)
     {
         if (string.IsNullOrEmpty(name)) { return name; }
+        var invalid = new HashSet<char>(Path.GetInvalidFileNameChars());
         var sb = new StringBuilder(name.Length);
-        foreach (char c in name)
+        foreach (char ch in name)
         {
-            bool forbidden = false;
-            foreach (char f in ForbiddenChars)
-            {
-                if (c == f)
-                {
-                    forbidden = true;
-                    break;
-                }
-            }
-            sb.Append(forbidden ? '_' : c);
+            sb.Append(invalid.Contains(ch) ? '_' : ch);
         }
         return sb.ToString();
     }

@@ -1002,7 +1002,7 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateDrzewo_ShowsPolishSuccess_WhenGenerateSucceeds()
+    public void GenerateDrzewo_SetsSuccessMessage_WhenGenerateSucceeds()
     {
         //Arrange
         var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
@@ -1024,7 +1024,7 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateDrzewo_ShowsPolishError_WhenGenerateThrows()
+    public void GenerateDrzewo_SetsErrorMessage_WhenGenerateThrows()
     {
         //Arrange
         var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");

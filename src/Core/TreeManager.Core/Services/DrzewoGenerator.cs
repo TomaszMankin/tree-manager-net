@@ -11,10 +11,7 @@ using TreeManager.Core.Domain;
 
 namespace TreeManager.Core.Services;
 
-/// <summary>
-/// Generates the Drzewo folder-tree view.
-/// Generates the Drzewo folder-tree view using spouse-seeded hourglass DFS.
-/// </summary>
+/// <summary>Generates the Drzewo folder-tree view using spouse-seeded hourglass DFS.</summary>
 public sealed class DrzewoGenerator : IDrzewoGenerator
 {
     private const string DrzewoFolderName = "Drzewo";
@@ -36,14 +33,13 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
         _log = log;
     }
 
-    // -------------------------------------------------------------------------
-    // IDrzewoGenerator
-    // -------------------------------------------------------------------------
+    #region IDrzewoGenerator
 
     public (int Written, IReadOnlyList<string> Log) Generate(string rootPath, Guid rootPersonId)
     {
         // Build UUID→MeFile map from the full scan
         var peopleByUid = new Dictionary<Guid, MeFile>();
+        var scanErrors = new List<string>();
         foreach (var meFilePath in _processor.ScanMeFiles(rootPath))
         {
             try
@@ -56,12 +52,15 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Generate: failed to read {Path}", meFilePath);
+                _log.Error(ex, "Generate: failed to read {Path}", meFilePath);
+                scanErrors.Add($"READ_ERROR: {meFilePath} — {ex.Message}");
             }
         }
 
         var (members, computeLog) = ComputeMembership(rootPersonId, peopleByUid);
-        var buildLog = new List<string>(computeLog);
+        var buildLog = new List<string>(scanErrors.Count + computeLog.Count);
+        buildLog.AddRange(scanErrors);
+        buildLog.AddRange(computeLog);
 
         // Wipe + recreate Drzewo folder
         var drzewoPath = Path.Combine(rootPath, DrzewoFolderName);
@@ -103,15 +102,10 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
         return (written, buildLog);
     }
 
-    // -------------------------------------------------------------------------
-    // Pure membership computation
-    // -------------------------------------------------------------------------
+    #endregion
 
-    /// <summary>
-    /// Computes the hourglass membership for the given root person.
-    /// Pure: takes an in-memory map, returns ordered list + build log.
-    /// Spouse-seeded hourglass DFS: ancestors paternal-first, descendants BFS birth-order.
-    /// </summary>
+    #region Membership
+
     public (IReadOnlyList<FolderTreeMember> Members, IReadOnlyList<string> Log)
         ComputeMembership(Guid rootPersonId, IReadOnlyDictionary<Guid, MeFile> peopleByUid)
     {
@@ -123,7 +117,31 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             return ([], log);
         }
 
-        // ── Gen 0: root + spouses ──────────────────────────────────────────
+        var gen0 = BuildRootGeneration(rootPersonId, rootData, peopleByUid);
+        var ancestorCouples = DiscoverAncestorCouples(rootPersonId, rootData, gen0, peopleByUid, log);
+        var ancestorMembers = BuildAncestorMembers(ancestorCouples, peopleByUid);
+
+        foreach (var uid in ancestorMembers.Keys)
+        {
+            if (gen0.ContainsKey(uid))
+            {
+                log.Add($"CYCLE (ancestor): {uid} already in gen-0 members; gen-0 classification wins.");
+            }
+        }
+
+        var descendantCouples = DiscoverDescendantCouples(rootPersonId, rootData, gen0, ancestorMembers, peopleByUid, log);
+        var descendantMembers = BuildDescendantMembers(descendantCouples, peopleByUid);
+
+        return (AssembleMembers(gen0, ancestorMembers, descendantMembers), log);
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private Dictionary<Guid, FolderTreeMember> BuildRootGeneration(
+        Guid rootPersonId, MeFile rootData, IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
         var gen0Members = new Dictionary<Guid, FolderTreeMember>();
         gen0Members[rootPersonId] = new FolderTreeMember(
             Uid: rootPersonId,
@@ -144,7 +162,6 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
 
             if (!peopleByUid.TryGetValue(spouseId, out var spouseData))
             {
-                log.Add($"MISSING: spouse {spouseId} not in map.");
                 continue;
             }
 
@@ -159,21 +176,29 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                 TargetLocation: spouseData.Location);
         }
 
+        return gen0Members;
+    }
+
+    private Dictionary<int, List<(Guid BloodUid, Guid PartnerUid)>> DiscoverAncestorCouples(
+        Guid rootPersonId, MeFile rootData,
+        Dictionary<Guid, FolderTreeMember> gen0Members,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        List<string> log)
+    {
         // ── Ancestor DFS (upward) ─────────────────────────────────────────
         // Two-pass: pass 1 discovers couples in DFS order; pass 2 assigns letters.
-        // Spouse-seeded: push spouses first, root last → root pops first via LIFO.
-        var ancestorCouplesByGen = new Dictionary<int, List<(Guid BloodUid, Guid PartnerUid)>>();
-        var ancestorCoupleUidSet = new HashSet<Guid>();
-        var ancestorVisited = new HashSet<Guid> { rootPersonId };
+        var couplesByGen = new Dictionary<int, List<(Guid BloodUid, Guid PartnerUid)>>();
+        var coupleUidSet = new HashSet<Guid>();
+        var visited = new HashSet<Guid> { rootPersonId };
         var dfsStack = new Stack<(Guid PersonUid, int Gen)>();
 
         // Push spouses first (root pops first via LIFO)
         foreach (var spouseId in rootData.SpouseId)
         {
-            if (spouseId != Guid.Empty && !ancestorVisited.Contains(spouseId))
+            if (spouseId != Guid.Empty && !visited.Contains(spouseId))
             {
                 dfsStack.Push((spouseId, 1));
-                ancestorVisited.Add(spouseId);
+                visited.Add(spouseId);
             }
         }
 
@@ -239,37 +264,37 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             var motherUid = parentsSorted.FirstOrDefault(p => p.Edge == "M").Uid;
 
             // Register as one couple if not already seen
-            if (fatherUid != Guid.Empty && !ancestorCoupleUidSet.Contains(fatherUid))
+            if (fatherUid != Guid.Empty && !coupleUidSet.Contains(fatherUid))
             {
-                if (!ancestorCouplesByGen.ContainsKey(gen))
+                if (!couplesByGen.ContainsKey(gen))
                 {
-                    ancestorCouplesByGen[gen] = [];
+                    couplesByGen[gen] = [];
                 }
 
-                ancestorCouplesByGen[gen].Add((fatherUid, motherUid));
-                ancestorCoupleUidSet.Add(fatherUid);
+                couplesByGen[gen].Add((fatherUid, motherUid));
+                coupleUidSet.Add(fatherUid);
                 if (motherUid != Guid.Empty)
                 {
-                    ancestorCoupleUidSet.Add(motherUid);
+                    coupleUidSet.Add(motherUid);
                 }
             }
-            else if (motherUid != Guid.Empty && !ancestorCoupleUidSet.Contains(motherUid))
+            else if (motherUid != Guid.Empty && !coupleUidSet.Contains(motherUid))
             {
-                if (!ancestorCouplesByGen.ContainsKey(gen))
+                if (!couplesByGen.ContainsKey(gen))
                 {
-                    ancestorCouplesByGen[gen] = [];
+                    couplesByGen[gen] = [];
                 }
 
-                ancestorCouplesByGen[gen].Add((motherUid, Guid.Empty));
-                ancestorCoupleUidSet.Add(motherUid);
+                couplesByGen[gen].Add((motherUid, Guid.Empty));
+                coupleUidSet.Add(motherUid);
             }
 
             // Push parents reversed-paternal-first (mother first, father last → father pops first)
             foreach (var (pid, _) in Enumerable.Reverse(parentsSorted))
             {
-                if (!ancestorVisited.Contains(pid))
+                if (!visited.Contains(pid))
                 {
-                    ancestorVisited.Add(pid);
+                    visited.Add(pid);
                     dfsStack.Push((pid, gen + 1));
                 }
                 else
@@ -279,9 +304,15 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             }
         }
 
-        // Pass 2: build ancestor FolderTreeMember objects
+        return couplesByGen;
+    }
+
+    private static Dictionary<Guid, FolderTreeMember> BuildAncestorMembers(
+        Dictionary<int, List<(Guid BloodUid, Guid PartnerUid)>> couplesByGen,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
         var ancestorMembers = new Dictionary<Guid, FolderTreeMember>();
-        foreach (var (gen, couples) in ancestorCouplesByGen)
+        foreach (var (gen, couples) in couplesByGen)
         {
             int total = couples.Count;
             for (int coupleIdx = 0; coupleIdx < couples.Count; coupleIdx++)
@@ -318,36 +349,37 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             }
         }
 
-        // Log cycle collisions with gen-0
-        foreach (var uid in ancestorMembers.Keys)
-        {
-            if (gen0Members.ContainsKey(uid))
-            {
-                log.Add($"CYCLE (ancestor): {uid} already in gen-0 members; gen-0 classification wins.");
-            }
-        }
+        return ancestorMembers;
+    }
 
+    private Dictionary<int, List<(Guid ChildUid, Guid SpouseUid)>> DiscoverDescendantCouples(
+        Guid rootPersonId, MeFile rootData,
+        Dictionary<Guid, FolderTreeMember> gen0Members,
+        Dictionary<Guid, FolderTreeMember> ancestorMembers,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        List<string> log)
+    {
         // ── Descendant traversal (downward) — FIFO BFS-like ──────────────
-        var descendantCouplesByGen = new Dictionary<int, List<(Guid ChildUid, Guid SpouseUid)>>();
-        var descendantCoupleChildSet = new HashSet<Guid>();
-        var descendantVisited = new HashSet<Guid> { rootPersonId };
+        var couplesByGen = new Dictionary<int, List<(Guid ChildUid, Guid SpouseUid)>>();
+        var coupleChildSet = new HashSet<Guid>();
+        var visited = new HashSet<Guid> { rootPersonId };
         var descQueue = new Queue<(Guid PersonUid, int NextGen)>();
 
         // Seed from root's children at gen -1
         foreach (var childId in rootData.ChildrenId)
         {
-            if (childId == Guid.Empty || descendantVisited.Contains(childId))
+            if (childId == Guid.Empty || visited.Contains(childId))
             {
                 continue;
             }
 
-            descendantVisited.Add(childId);
+            visited.Add(childId);
 
-            if (!descendantCoupleChildSet.Contains(childId))
+            if (!coupleChildSet.Contains(childId))
             {
-                if (!descendantCouplesByGen.ContainsKey(-1))
+                if (!couplesByGen.ContainsKey(-1))
                 {
-                    descendantCouplesByGen[-1] = [];
+                    couplesByGen[-1] = [];
                 }
 
                 Guid firstSpouseId = Guid.Empty;
@@ -358,8 +390,8 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                         Guid.Empty);
                 }
 
-                descendantCouplesByGen[-1].Add((childId, firstSpouseId));
-                descendantCoupleChildSet.Add(childId);
+                couplesByGen[-1].Add((childId, firstSpouseId));
+                coupleChildSet.Add(childId);
             }
 
             descQueue.Enqueue((childId, -2));
@@ -376,18 +408,18 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
 
             foreach (var childId in personData.ChildrenId)
             {
-                if (childId == Guid.Empty || descendantVisited.Contains(childId))
+                if (childId == Guid.Empty || visited.Contains(childId))
                 {
                     continue;
                 }
 
-                descendantVisited.Add(childId);
+                visited.Add(childId);
 
-                if (!descendantCoupleChildSet.Contains(childId))
+                if (!coupleChildSet.Contains(childId))
                 {
-                    if (!descendantCouplesByGen.ContainsKey(nextGen))
+                    if (!couplesByGen.ContainsKey(nextGen))
                     {
-                        descendantCouplesByGen[nextGen] = [];
+                        couplesByGen[nextGen] = [];
                     }
 
                     var alreadyPlaced = new HashSet<Guid>(gen0Members.Keys);
@@ -404,17 +436,23 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                             Guid.Empty);
                     }
 
-                    descendantCouplesByGen[nextGen].Add((childId, firstSpouseId));
-                    descendantCoupleChildSet.Add(childId);
+                    couplesByGen[nextGen].Add((childId, firstSpouseId));
+                    coupleChildSet.Add(childId);
                 }
 
                 descQueue.Enqueue((childId, nextGen - 1));
             }
         }
 
-        // Pass 2: build descendant FolderTreeMember objects
+        return couplesByGen;
+    }
+
+    private static Dictionary<Guid, FolderTreeMember> BuildDescendantMembers(
+        Dictionary<int, List<(Guid ChildUid, Guid SpouseUid)>> couplesByGen,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
         var descendantMembers = new Dictionary<Guid, FolderTreeMember>();
-        foreach (var (gen, couples) in descendantCouplesByGen)
+        foreach (var (gen, couples) in couplesByGen)
         {
             int total = couples.Count;
             for (int coupleIdx = 0; coupleIdx < couples.Count; coupleIdx++)
@@ -454,31 +492,35 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             }
         }
 
-        // Assemble: gen0, then ancestors, then descendants (gen-0 wins collisions)
-        var allMembers = new Dictionary<Guid, FolderTreeMember>();
-        foreach (var kv in gen0Members) { allMembers[kv.Key] = kv.Value; }
-        foreach (var kv in ancestorMembers)
-        {
-            if (!allMembers.ContainsKey(kv.Key))
-            {
-                allMembers[kv.Key] = kv.Value;
-            }
-        }
-
-        foreach (var kv in descendantMembers)
-        {
-            if (!allMembers.ContainsKey(kv.Key))
-            {
-                allMembers[kv.Key] = kv.Value;
-            }
-        }
-
-        return (allMembers.Values.ToList(), log);
+        return descendantMembers;
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    private static IReadOnlyList<FolderTreeMember> AssembleMembers(
+        Dictionary<Guid, FolderTreeMember> gen0,
+        Dictionary<Guid, FolderTreeMember> ancestors,
+        Dictionary<Guid, FolderTreeMember> descendants)
+    {
+        // Assemble: gen0, then ancestors, then descendants (gen-0 wins collisions)
+        var allMembers = new Dictionary<Guid, FolderTreeMember>();
+        foreach (var kv in gen0) { allMembers[kv.Key] = kv.Value; }
+        foreach (var kv in ancestors)
+        {
+            if (!allMembers.ContainsKey(kv.Key))
+            {
+                allMembers[kv.Key] = kv.Value;
+            }
+        }
+
+        foreach (var kv in descendants)
+        {
+            if (!allMembers.ContainsKey(kv.Key))
+            {
+                allMembers[kv.Key] = kv.Value;
+            }
+        }
+
+        return allMembers.Values.ToList();
+    }
 
     private static string GenderToken(Sex sex)
     {
@@ -511,4 +553,6 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             n++;
         }
     }
+
+    #endregion
 }

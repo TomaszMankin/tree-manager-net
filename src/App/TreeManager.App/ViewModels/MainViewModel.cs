@@ -11,6 +11,7 @@ using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
 
+/// <summary>Main application ViewModel — coordinates person editing, draft management, and Drzewo generation.</summary>
 public sealed partial class MainViewModel : ObservableObject
 {
     private const string PeopleListFolderName = "Lista osób";

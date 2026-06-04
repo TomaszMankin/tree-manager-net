@@ -9,11 +9,7 @@ using Windows.Win32.UI.Shell;
 
 namespace TreeManager.Infrastructure.Shell;
 
-/// <summary>
-/// Creates Windows shortcut (.lnk) files via IShellLinkW + IPersistFile COM interfaces.
-/// Uses CsWin32-generated interop (Unicode-safe; no WScript.Shell).
-/// ADR-014.
-/// </summary>
+/// <summary>Creates Windows shortcut (.lnk) files using IShellLinkW COM interface via CsWin32-generated P/Invoke (Unicode-safe).</summary>
 public sealed class ShellLinkShortcutCreator : IShortcutCreator
 {
     // Stable, public Windows constant: CLSID for Shell Link coclass.
