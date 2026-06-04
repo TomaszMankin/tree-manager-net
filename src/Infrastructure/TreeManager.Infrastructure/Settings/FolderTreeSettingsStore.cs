@@ -57,7 +57,7 @@ public sealed class FolderTreeSettingsStore : IFolderTreeSettingsStore
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "FolderTreeSettingsStore: failed to read {Path}; returning Guid.Empty", path);
+            _log.Error(ex, "FolderTreeSettingsStore: failed to read {Path}; returning Guid.Empty", path);
             return Guid.Empty;
         }
     }
