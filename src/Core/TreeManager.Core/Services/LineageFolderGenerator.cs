@@ -41,9 +41,74 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
 
     public (int Written, IReadOnlyList<string> Log) Generate(string rootPath, Guid rootPersonId)
     {
-        // Build UUID→MeFile map from full scan
+        // 1. Scan people
+        var (peopleByUid, scanLog) = ScanPeople(rootPath);
+
+        // 2. Compute Drzewo membership for token reuse
+        var (drzewoByUid, drzewoLog) = ComputeDrzewoMembership(rootPersonId, peopleByUid);
+
+        // 3. Compute lineages (throws TreeIntegrityException on corruption)
+        var (lineages, lineageLog) = ComputeLineages(rootPersonId, peopleByUid);
+
+        var buildLog = new List<string>(scanLog.Count + drzewoLog.Count + lineageLog.Count);
+        buildLog.AddRange(scanLog);
+        buildLog.AddRange(drzewoLog);
+        buildLog.AddRange(lineageLog);
+
+        // 4. Wipe and recreate Rody/
+        WipeRodyFolder(rootPath);
+
+        // 5. Write shortcuts
+        var written = WriteShortcuts(rootPath, lineages, peopleByUid, drzewoByUid, buildLog);
+
+        return (written, buildLog);
+    }
+
+    #endregion
+
+    #region ComputeLineages
+
+    public (IReadOnlyDictionary<string, LineageGroup>, IReadOnlyList<string>) ComputeLineages(
+        Guid rootPersonId,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
+        var log = new List<string>();
+        var result = new Dictionary<string, LineageGroup>(StringComparer.Ordinal);
+
+        // 1. Validate root
+        if (!peopleByUid.TryGetValue(rootPersonId, out var root))
+        {
+            log.Add($"ERROR: root person {rootPersonId} not found in map.");
+            return (result, log);
+        }
+
+        // 2. Check bidirectional integrity across all people (throws TreeIntegrityException on violation)
+        CheckBidirectionalIntegrity(peopleByUid);
+
+        // 3. Build universal members — DFS down from root via ChildrenId
+        var universalMembers = BuildUniversalMemberList(root, rootPersonId, peopleByUid);
+
+        // 4. Collect contributors — root.ParentsId + per-spouse: spouse.ParentsId
+        var contributors = CollectContributors(root, peopleByUid, log);
+
+        // 5. Resolve folder keys with two-pass clash detection
+        var folderKeys = ResolveFolderKeys(contributors, peopleByUid, log);
+
+        // 6. Build one lineage group per resolved folder key
+        BuildLineageGroups(folderKeys, universalMembers, peopleByUid, log, result);
+
+        return (result, log);
+    }
+
+    #endregion
+
+    #region Generate helpers
+
+    private (IReadOnlyDictionary<Guid, MeFile> PeopleByUid, List<string> Log) ScanPeople(string rootPath)
+    {
         var peopleByUid = new Dictionary<Guid, MeFile>();
-        var scanErrors = new List<string>();
+        var scanLog = new List<string>();
+
         foreach (var meFilePath in _processor.ScanMeFiles(rootPath))
         {
             try
@@ -57,23 +122,23 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
             catch (Exception ex)
             {
                 _log.Error(ex, "Generate: failed to read {Path}", meFilePath);
-                scanErrors.Add($"READ_ERROR: {meFilePath} — {ex.Message}");
+                scanLog.Add($"READ_ERROR: {meFilePath} — {ex.Message}");
             }
         }
 
-        // Compute Drzewo membership for token reuse (F-003)
+        return (peopleByUid, scanLog);
+    }
+
+    private (IReadOnlyDictionary<Guid, FolderTreeMember> DrzewoByUid, IReadOnlyList<string> Log)
+        ComputeDrzewoMembership(Guid rootPersonId, IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
         var (drzewoMembers, drzewoLog) = _folderTreeGenerator.ComputeMembership(rootPersonId, peopleByUid);
         var drzewoByUid = drzewoMembers.ToDictionary(m => m.Uid);
+        return (drzewoByUid, drzewoLog);
+    }
 
-        // Compute lineages
-        var (lineages, lineageLog) = ComputeLineages(rootPersonId, peopleByUid);
-
-        var buildLog = new List<string>(scanErrors.Count + drzewoLog.Count + lineageLog.Count);
-        buildLog.AddRange(scanErrors);
-        buildLog.AddRange(drzewoLog);
-        buildLog.AddRange(lineageLog);
-
-        // Wipe + recreate Rody/
+    private void WipeRodyFolder(string rootPath)
+    {
         var rodyPath = Path.Combine(rootPath, OutputFolderName);
         _fs.CreateDirectory(rodyPath);
 
@@ -86,13 +151,22 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
         {
             _fs.DeleteDirectory(dirPath, recursive: true);
         }
+    }
 
-        // Write one subfolder per surname, one shortcut per member
+    private int WriteShortcuts(
+        string rootPath,
+        IReadOnlyDictionary<string, LineageGroup> lineages,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        IReadOnlyDictionary<Guid, FolderTreeMember> drzewoByUid,
+        List<string> buildLog)
+    {
+        var rodyPath = Path.Combine(rootPath, OutputFolderName);
         int written = 0;
-        foreach (var surname in lineages.Keys.OrderBy(s => s, StringComparer.Ordinal))
+
+        foreach (var folderKey in lineages.Keys.OrderBy(s => s, StringComparer.Ordinal))
         {
-            var group = lineages[surname];
-            var subDir = Path.Combine(rodyPath, FolderTreeNaming.Sanitize(surname));
+            var group = lineages[folderKey];
+            var subDir = Path.Combine(rodyPath, FolderTreeNaming.Sanitize(folderKey));
             _fs.CreateDirectory(subDir);
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -139,32 +213,54 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
             }
         }
 
-        return (written, buildLog);
+        return written;
     }
 
     #endregion
 
-    #region ComputeLineages
+    #region ComputeLineages helpers
 
-    public (IReadOnlyDictionary<string, LineageGroup>, IReadOnlyList<string>) ComputeLineages(
+    private static void CheckBidirectionalIntegrity(IReadOnlyDictionary<Guid, MeFile> peopleByUid)
+    {
+        foreach (var (personUid, person) in peopleByUid)
+        {
+            foreach (var parentUid in person.ParentsId)
+            {
+                if (parentUid == Guid.Empty)
+                {
+                    continue;
+                }
+
+                if (!peopleByUid.TryGetValue(parentUid, out var parent))
+                {
+                    continue;
+                }
+
+                if (!parent.ChildrenId.Contains(personUid))
+                {
+                    throw new TreeIntegrityException(
+                        $"Broken bidirectional reference: {personUid} ({person.FirstName} {person.LastName}) lists {parentUid} as parent, but parent does not list {personUid} as child.");
+                }
+            }
+        }
+    }
+
+    private static List<Guid> BuildUniversalMemberList(
+        MeFile root,
         Guid rootPersonId,
         IReadOnlyDictionary<Guid, MeFile> peopleByUid)
     {
-        var log = new List<string>();
-        var result = new Dictionary<string, LineageGroup>(StringComparer.Ordinal);
-
-        if (!peopleByUid.TryGetValue(rootPersonId, out var root))
-        {
-            log.Add($"ERROR: root person {rootPersonId} not found in map.");
-            return (result, log);
-        }
-
-        // Step 2: universal members — DFS down from root via ChildrenId
         var universalMembers = new List<Guid>();
         var universalSeen = new HashSet<Guid>();
         BuildUniversalMembers(root, rootPersonId, peopleByUid, universalMembers, universalSeen);
+        return universalMembers;
+    }
 
-        // Step 3: enumerate contributors — root.ParentsId (ALL), then per spouse: spouse.ParentsId (ALL)
+    private static List<Guid> CollectContributors(
+        MeFile root,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        List<string> log)
+    {
         var contributors = new List<Guid>();
 
         foreach (var parentUid in root.ParentsId)
@@ -201,7 +297,17 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
             }
         }
 
-        // Step 4: per contributor — build lineage group
+        return contributors;
+    }
+
+    private static Dictionary<Guid, string> ResolveFolderKeys(
+        List<Guid> contributors,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        List<string> log)
+    {
+        // Pass 1: compute raw candidate key for each contributor that exists in the map
+        var candidateKeys = new Dictionary<Guid, string>();
+
         foreach (var contributorUid in contributors)
         {
             if (!peopleByUid.TryGetValue(contributorUid, out var contributor))
@@ -210,24 +316,58 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
                 continue;
             }
 
-            var surname = LineageSurname(contributor);
-            if (surname == null)
+            var key = RawSurnameKey(contributor);
+            candidateKeys[contributorUid] = key;
+        }
+
+        // Pass 2: detect clashes; escalate both parties to full display name
+        var keyFrequency = candidateKeys.Values
+            .GroupBy(k => k, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var folderKeys = new Dictionary<Guid, string>();
+
+        foreach (var (uid, rawKey) in candidateKeys)
+        {
+            if (keyFrequency.Contains(rawKey))
             {
-                log.Add($"SKIP_CONTRIBUTOR: {contributorUid} has null/empty/unknown surname.");
+                folderKeys[uid] = FolderTreeNaming.FullName(peopleByUid[uid]).Trim();
+            }
+            else
+            {
+                folderKeys[uid] = rawKey;
+            }
+        }
+
+        return folderKeys;
+    }
+
+    private static void BuildLineageGroups(
+        Dictionary<Guid, string> folderKeys,
+        List<Guid> universalMembers,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid,
+        List<string> log,
+        Dictionary<string, LineageGroup> result)
+    {
+        foreach (var (contributorUid, folderKey) in folderKeys)
+        {
+            if (result.ContainsKey(folderKey))
+            {
+                log.Add($"COLLISION: folder key '{folderKey}' already exists; contributor {contributorUid} dropped.");
                 continue;
             }
 
-            if (result.ContainsKey(surname))
+            if (!peopleByUid.TryGetValue(contributorUid, out var contributor))
             {
-                log.Add($"COLLISION: surname '{surname}' already seeded; contributor {contributorUid} dropped.");
                 continue;
             }
 
-            // Build member list: a. universal, b. contributor, c. contributor spouses, d. ancestor walk
             var memberList = new List<Guid>();
             var memberSeen = new HashSet<Guid>();
 
-            // a. universal members
+            // a. Universal members
             foreach (var uid in universalMembers)
             {
                 if (memberSeen.Add(uid))
@@ -236,13 +376,13 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
                 }
             }
 
-            // b. contributor
+            // b. Contributor
             if (memberSeen.Add(contributorUid))
             {
                 memberList.Add(contributorUid);
             }
 
-            // c. contributor's spouses (each SpouseId as leaf)
+            // c. Contributor's spouses (each as leaf)
             foreach (var spUid in contributor.SpouseId)
             {
                 if (spUid != Guid.Empty && memberSeen.Add(spUid))
@@ -251,18 +391,36 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
                 }
             }
 
-            // d. ancestor walk (R4 — full bloodline, NO surname gate)
+            // d. Full ancestor walk (no surname gate)
             WalkAncestors(contributor, peopleByUid, memberList, memberSeen, log);
 
-            result[surname] = new LineageGroup(surname, contributorUid, memberList);
+            result[folderKey] = new LineageGroup(folderKey, contributorUid, memberList);
+        }
+    }
+
+    private static string RawSurnameKey(MeFile person)
+    {
+        if (person.HasMaidenName)
+        {
+            var maiden = person.MaidenName.Trim();
+            if (!string.IsNullOrEmpty(maiden) && maiden != UnknownSentinel)
+            {
+                return maiden;
+            }
         }
 
-        return (result, log);
+        var last = person.LastName.Trim();
+        if (!string.IsNullOrEmpty(last) && last != UnknownSentinel)
+        {
+            return last;
+        }
+
+        return FolderTreeNaming.FullName(person).Trim();
     }
 
     #endregion
 
-    #region Helpers
+    #region Shared helpers
 
     private static void BuildUniversalMembers(
         MeFile person,
@@ -271,7 +429,6 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
         List<Guid> members,
         HashSet<Guid> seen)
     {
-        // DFS down from root: add person, then add each SpouseId as leaf, then recurse into children
         if (!seen.Add(personUid))
         {
             return;
@@ -315,7 +472,6 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
         HashSet<Guid> seen,
         List<string> log)
     {
-        // BFS via queue (py uses pop(0) = FIFO); NO surname comparison anywhere in this method
         var queue = new Queue<Guid>();
 
         foreach (var parentUid in startPerson.ParentsId)
@@ -332,24 +488,29 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
         {
             var ancUid = queue.Dequeue();
 
-            if (ancUid == Guid.Empty || !visited.Add(ancUid))
+            if (ancUid == Guid.Empty)
             {
                 continue;
+            }
+
+            if (!visited.Add(ancUid))
+            {
+                throw new TreeIntegrityException(
+                    $"Cycle detected in ancestor walk: {ancUid} was visited more than once starting from {startPerson.UniqueIdentifier}.");
             }
 
             if (!peopleByUid.TryGetValue(ancUid, out var anc))
             {
-                log.Add($"ANCESTOR_MISSING: {ancUid} not readable; branch stopped.");
-                continue;
+                log.Add($"ANCESTOR_MISSING: {ancUid} — folder removed outside application.");
+                throw new TreeIntegrityException(
+                    $"Person folder missing or unreadable: {ancUid}. The tree was likely modified outside the application.");
             }
 
-            // Blood ancestor — added unconditionally; NO surname check
             if (seen.Add(ancUid))
             {
                 members.Add(ancUid);
             }
 
-            // Spouse-of-ancestor: added as leaf (NOT walked further)
             foreach (var spUid in anc.SpouseId)
             {
                 if (spUid != Guid.Empty && seen.Add(spUid))
@@ -358,7 +519,6 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
                 }
             }
 
-            // Blood parents: pushed to queue (walk continues upward)
             foreach (var ppUid in anc.ParentsId)
             {
                 if (ppUid != Guid.Empty)
@@ -367,18 +527,6 @@ public sealed class LineageFolderGenerator : ILineageFolderGenerator
                 }
             }
         }
-    }
-
-    private static string LineageSurname(MeFile person)
-    {
-        var candidate = person.HasMaidenName ? person.MaidenName : person.LastName;
-        candidate = candidate.Trim();
-        if (string.IsNullOrEmpty(candidate) || candidate == UnknownSentinel)
-        {
-            return null;
-        }
-
-        return candidate;
     }
 
     #endregion

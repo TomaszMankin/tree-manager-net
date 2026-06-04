@@ -19,6 +19,7 @@ public sealed partial class MainViewModel : ObservableObject
     private const string GenerateFolderTreeErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
     private const string GenerateLineageSuccessTemplate = "Wygenerowano rody: {0} skrótów.";
     private const string GenerateLineageErrorMessage = "Nie udało się wygenerować rodów. Spróbuj ponownie.";
+    private const string GenerateLineageIntegrityErrorMessage = "Błąd integralności drzewa. Dane zostały zmienione poza aplikacją.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -354,6 +355,12 @@ public sealed partial class MainViewModel : ObservableObject
             var result = _folderTreeDeps.LineageGenerator.Generate(rootPath, selected.UniqueIdentifier);
             ErrorMessage = string.Empty;
             StatusMessage = string.Format(GenerateLineageSuccessTemplate, result.Written);
+        }
+        catch (TreeIntegrityException ex)
+        {
+            _log.Error(ex, "GenerateLineageFolders: tree integrity violation");
+            ErrorMessage = GenerateLineageIntegrityErrorMessage;
+            StatusMessage = string.Empty;
         }
         catch (Exception ex)
         {

@@ -49,26 +49,24 @@ public class LineageFolderGeneratorIntegrationTests : IDisposable
     public void Generate_BuildsExpectedRodyStructure_WhenEndToEndFixture()
     {
         //Arrange
-        // Topology: root(Mankin) + parents=[father(Łęczyński), mother(Mankin)]
-        // → 2 lineage folders: Łęczyński (seeded by father), Mankin (seeded by mother)
-        // Both folders contain root as universal member.
         var rootId = Guid.NewGuid();
         var fatherId = Guid.NewGuid();
         var motherId = Guid.NewGuid();
         var childId = Guid.NewGuid();
 
-        // Create person folders + me.json files on disk
-        WriteMeFile(rootId, "Adam", "Mankin", Sex.Male,
+        WriteMeFile(rootId, "Adam", "Nowicki", Sex.Male,
             parentIds: [fatherId, motherId],
             childrenIds: [childId]);
-        WriteMeFile(fatherId, "Władysław", "Łęczyński", Sex.Male);
-        WriteMeFile(motherId, "Maria", "Mankin", Sex.Female);
-        WriteMeFile(childId, "Tomek", "Mankin", Sex.Male);
+        WriteMeFile(fatherId, "Władysław", "Łęczyński", Sex.Male,
+            childrenIds: [rootId]);
+        WriteMeFile(motherId, "Maria", "Nowicki", Sex.Female,
+            childrenIds: [rootId]);
+        WriteMeFile(childId, "Tomek", "Nowicki", Sex.Male);
 
         //Act
         var (written, log) = _sut.Generate(_tempRoot, rootId);
 
-        //Assert — Rody/ exists with two subfolders
+        //Assert — 'Rody/' exists with two subfolders
         var rodyPath = Path.Combine(_tempRoot, RodyFolder);
         Assert.True(Directory.Exists(rodyPath), "Rody folder should exist");
 
@@ -78,23 +76,23 @@ public class LineageFolderGeneratorIntegrationTests : IDisposable
             .ToList();
 
         Assert.Contains("Łęczyński", subFolders);
-        Assert.Contains("Mankin", subFolders);
+        Assert.Contains("Nowicki", subFolders);
 
         // Each folder must contain at least one .lnk file
         var leczynFolder = Path.Combine(rodyPath, "Łęczyński");
-        var mankinFolder = Path.Combine(rodyPath, "Mankin");
+        var nowickiFolder = Path.Combine(rodyPath, "Nowicki");
 
         var leczynLinks = Directory.GetFiles(leczynFolder, "*.lnk");
-        var mankinLinks = Directory.GetFiles(mankinFolder, "*.lnk");
+        var nowickiLinks = Directory.GetFiles(nowickiFolder, "*.lnk");
 
         Assert.NotEmpty(leczynLinks);
-        Assert.NotEmpty(mankinLinks);
+        Assert.NotEmpty(nowickiLinks);
 
-        // Root (Adam Mankin) must appear in BOTH folders as a universal member
-        Assert.Contains(leczynLinks, lnk => Path.GetFileName(lnk).Contains("Adam Mankin"));
-        Assert.Contains(mankinLinks, lnk => Path.GetFileName(lnk).Contains("Adam Mankin"));
+        // Root (Adam Nowicki) must appear in BOTH folders as a universal member
+        Assert.Contains(leczynLinks, lnk => Path.GetFileName(lnk).Contains("Adam Nowicki"));
+        Assert.Contains(nowickiLinks, lnk => Path.GetFileName(lnk).Contains("Adam Nowicki"));
 
-        // Father (Władysław Łęczyński) must be in Łęczyński folder (contributor)
+        // Father (Władysław Łęczyński) must be in 'Łęczyński' folder (contributor)
         Assert.Contains(leczynLinks, lnk => Path.GetFileName(lnk).Contains("Łęczyński"));
 
         // Total written > 0

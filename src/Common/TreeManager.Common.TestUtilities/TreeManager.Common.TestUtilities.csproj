@@ -8,4 +8,8 @@
     <EmbeddedResource Include="Fixtures\me-fixture-bom.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\TreeManager.Core\TreeManager.Core.csproj" />
+  </ItemGroup>
+
 </Project>
