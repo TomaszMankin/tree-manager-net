@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,8 +15,8 @@ namespace TreeManager.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private const string PeopleListFolderName = "Lista osób";
-    private const string GenerateDrzewoSuccessTemplate = "Wygenerowano drzewo: {0} skrótów.";
-    private const string GenerateDrzewoErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
+    private const string GenerateFolderTreeSuccessTemplate = "Wygenerowano drzewo: {0} skrótów.";
+    private const string GenerateFolderTreeErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -26,7 +26,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IPersonRepository _personRepository;
     private readonly IRootPointerStore _rootPointerStore;
     private readonly PersonEditDependencies _editDeps;
-    private readonly DrzewoCommandDependencies _drzewoDeps;
+    private readonly FolderTreeCommandDependencies _folderTreeDeps;
     private readonly ILogger _log;
 
     private MeFile _originalSnapshot;
@@ -39,7 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         IPersonRepository personRepository,
         IRootPointerStore rootPointerStore,
         PersonEditDependencies editDeps,
-        DrzewoCommandDependencies drzewoDeps,
+        FolderTreeCommandDependencies folderTreeDeps,
         ILogger log)
     {
         Person = person;
@@ -49,7 +49,7 @@ public sealed partial class MainViewModel : ObservableObject
         _personRepository = personRepository;
         _rootPointerStore = rootPointerStore;
         _editDeps = editDeps;
-        _drzewoDeps = drzewoDeps;
+        _folderTreeDeps = folderTreeDeps;
         _log = log;
     }
 
@@ -292,12 +292,12 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void GenerateDrzewo()
+    private void GenerateFolderTree()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
         {
-            _log.Warning("GenerateDrzewo called with empty root path");
+            _log.Warning("GenerateFolderTree called with empty root path");
             return;
         }
 
@@ -311,15 +311,15 @@ public sealed partial class MainViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            _drzewoDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
-            var result = _drzewoDeps.Generator.Generate(rootPath, selected.UniqueIdentifier);
+            _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
+            var result = _folderTreeDeps.Generator.Generate(rootPath, selected.UniqueIdentifier);
             ErrorMessage = string.Empty;
-            StatusMessage = string.Format(GenerateDrzewoSuccessTemplate, result.Written);
+            StatusMessage = string.Format(GenerateFolderTreeSuccessTemplate, result.Written);
         }
         catch (Exception ex)
         {
-            _log.Error(ex, "GenerateDrzewo failed");
-            ErrorMessage = GenerateDrzewoErrorMessage;
+            _log.Error(ex, "GenerateFolderTree failed");
+            ErrorMessage = GenerateFolderTreeErrorMessage;
             StatusMessage = string.Empty;
         }
         finally

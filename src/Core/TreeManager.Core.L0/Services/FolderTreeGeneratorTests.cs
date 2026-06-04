@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Moq;
@@ -12,22 +12,22 @@ using TreeManager.Core.Services;
 
 namespace TreeManager.Core.L0.Services;
 
-public class DrzewoGeneratorTests
+public class FolderTreeGeneratorTests
 {
     private readonly Mock<IMeFileProcessor> _mockProcessor;
     private readonly Mock<IShortcutCreator> _mockShortcutCreator;
     private readonly Mock<IFileSystemFacade> _mockFs;
     private readonly Mock<ILogger> _mockLog;
-    private readonly DrzewoGenerator _sut;
+    private readonly FolderTreeGenerator _sut;
 
-    public DrzewoGeneratorTests()
+    public FolderTreeGeneratorTests()
     {
         _mockProcessor = new Mock<IMeFileProcessor>();
         _mockShortcutCreator = new Mock<IShortcutCreator>();
         _mockFs = new Mock<IFileSystemFacade>();
         _mockLog = new Mock<ILogger>();
 
-        _sut = new DrzewoGenerator(
+        _sut = new FolderTreeGenerator(
             _mockProcessor.Object,
             _mockShortcutCreator.Object,
             _mockFs.Object,
@@ -297,7 +297,7 @@ public class DrzewoGeneratorTests
 
         //Act
         var (members, _) = _sut.ComputeMembership(adamId, map);
-        var filenames = members.Select(DrzewoNaming.RenderFilename).ToHashSet();
+        var filenames = members.Select(FolderTreeNaming.RenderFilename).ToHashSet();
 
         //Assert — expected set hand-derived from py algorithm:
         // gen 0 self+spouse (no couple bracket)
@@ -353,7 +353,7 @@ public class DrzewoGeneratorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Generate_WipesDrzewoBeforeWriting_WhenDrzewoExists()
+    public void Generate_WipesOutputFolder_WhenOutputFolderExists()
     {
         //Arrange
         const string Root = @"C:\fake\root";
@@ -390,7 +390,7 @@ public class DrzewoGeneratorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Generate_CreatesDrzewoDirectory_WhenMissing()
+    public void Generate_CreatesOutputDirectory_WhenMissing()
     {
         //Arrange
         const string Root = @"C:\fake\root";

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using TreeManager.App.Services;
 using TreeManager.App.Startup;
@@ -63,9 +63,9 @@ public partial class App : Application
         services.AddSingleton<IDraftPromoter, DraftPromoter>();
         services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
-        services.AddSingleton<IDrzewoGenerator, DrzewoGenerator>();
-        services.AddSingleton<IDrzewoSettingsStore, DrzewoSettingsStore>();
-        services.AddSingleton<DrzewoCommandDependencies>();
+        services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
+        services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
+        services.AddSingleton<FolderTreeCommandDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
         services.AddTransient<OptionalDatePickerViewModel>();

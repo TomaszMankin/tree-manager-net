@@ -1,7 +1,7 @@
 # DES-001 — Windows filesystem as the Drzewo rendering medium
 
 ## What
-Drzewo renders the family tree view as a flat folder of Windows shortcut (.lnk) files. Each shortcut points to the corresponding person folder under `Lista osób`.
+The Drzewo folder represents the family tree as a flat set of Windows shortcut (.lnk) files. Each shortcut points to the corresponding person folder under `Lista osób`.
 
 ## Why
 Windows Explorer displays .lnk files with their target's folder icon, providing a navigable generational view without any custom UI component. The user can browse generations, identify generational clusters by the encoded sort prefix, and open any person folder with a double-click.

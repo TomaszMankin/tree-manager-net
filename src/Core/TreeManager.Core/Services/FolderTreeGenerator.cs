@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,16 +12,16 @@ using TreeManager.Core.Domain;
 namespace TreeManager.Core.Services;
 
 /// <summary>Generates the Drzewo folder-tree view using spouse-seeded hourglass DFS.</summary>
-public sealed class DrzewoGenerator : IDrzewoGenerator
+public sealed class FolderTreeGenerator : IFolderTreeGenerator
 {
-    private const string DrzewoFolderName = "Drzewo";
+    private const string OutputFolderName = "Drzewo";
 
     private readonly IMeFileProcessor _processor;
     private readonly IShortcutCreator _shortcutCreator;
     private readonly IFileSystemFacade _fs;
     private readonly ILogger _log;
 
-    public DrzewoGenerator(
+    public FolderTreeGenerator(
         IMeFileProcessor processor,
         IShortcutCreator shortcutCreator,
         IFileSystemFacade fs,
@@ -33,7 +33,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
         _log = log;
     }
 
-    #region IDrzewoGenerator
+    #region IFolderTreeGenerator
 
     public (int Written, IReadOnlyList<string> Log) Generate(string rootPath, Guid rootPersonId)
     {
@@ -63,15 +63,15 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
         buildLog.AddRange(computeLog);
 
         // Wipe + recreate Drzewo folder
-        var drzewoPath = Path.Combine(rootPath, DrzewoFolderName);
-        _fs.CreateDirectory(drzewoPath);
+        var outputPath = Path.Combine(rootPath, OutputFolderName);
+        _fs.CreateDirectory(outputPath);
 
-        foreach (var filePath in _fs.EnumerateFiles(drzewoPath, "*").ToList())
+        foreach (var filePath in _fs.EnumerateFiles(outputPath, "*").ToList())
         {
             _fs.DeleteFile(filePath);
         }
 
-        foreach (var dirPath in _fs.EnumerateDirectories(drzewoPath).ToList())
+        foreach (var dirPath in _fs.EnumerateDirectories(outputPath).ToList())
         {
             _fs.DeleteDirectory(dirPath, recursive: true);
         }
@@ -82,11 +82,11 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
 
         foreach (var member in members)
         {
-            var baseFilename = DrzewoNaming.RenderFilename(member);
+            var baseFilename = FolderTreeNaming.RenderFilename(member);
             var filename = DeduplicateFilename(baseFilename, seen);
             seen.Add(filename);
 
-            var lnkPath = Path.Combine(drzewoPath, filename);
+            var lnkPath = Path.Combine(outputPath, filename);
             try
             {
                 _shortcutCreator.Create(member.TargetLocation, lnkPath);
@@ -150,7 +150,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
             TotalCouplesInGeneration: 1,
             Role: "self",
             Gender: GenderToken(rootData.Sex),
-            FullName: DrzewoNaming.FullName(rootData),
+            FullName: FolderTreeNaming.FullName(rootData),
             TargetLocation: rootData.Location);
 
         foreach (var spouseId in rootData.SpouseId)
@@ -172,7 +172,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                 TotalCouplesInGeneration: 1,
                 Role: "spouse",
                 Gender: GenderToken(spouseData.Sex),
-                FullName: DrzewoNaming.FullName(spouseData),
+                FullName: FolderTreeNaming.FullName(spouseData),
                 TargetLocation: spouseData.Location);
         }
 
@@ -329,7 +329,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                         TotalCouplesInGeneration: total,
                         Role: "ancestor",
                         Gender: bData != null ? GenderToken(bData.Sex) : string.Empty,
-                        FullName: bData != null ? DrzewoNaming.FullName(bData) : bloodUid.ToString(),
+                        FullName: bData != null ? FolderTreeNaming.FullName(bData) : bloodUid.ToString(),
                         TargetLocation: bData?.Location ?? string.Empty);
                 }
 
@@ -343,7 +343,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                         TotalCouplesInGeneration: total,
                         Role: "ancestor",
                         Gender: pData != null ? GenderToken(pData.Sex) : string.Empty,
-                        FullName: pData != null ? DrzewoNaming.FullName(pData) : partnerUid.ToString(),
+                        FullName: pData != null ? FolderTreeNaming.FullName(pData) : partnerUid.ToString(),
                         TargetLocation: pData?.Location ?? string.Empty);
                 }
             }
@@ -471,7 +471,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                         TotalCouplesInGeneration: total,
                         Role: "descendant",
                         Gender: cGender,
-                        FullName: cData != null ? DrzewoNaming.FullName(cData) : childUid.ToString(),
+                        FullName: cData != null ? FolderTreeNaming.FullName(cData) : childUid.ToString(),
                         TargetLocation: cData?.Location ?? string.Empty);
 
                     // Descendant spouse inherits the descendant's gender (rule B)
@@ -485,7 +485,7 @@ public sealed class DrzewoGenerator : IDrzewoGenerator
                             TotalCouplesInGeneration: total,
                             Role: "descendant_spouse",
                             Gender: cGender, // rule B: descendant's gender, not spouse's own
-                            FullName: spData != null ? DrzewoNaming.FullName(spData) : spouseUid.ToString(),
+                            FullName: spData != null ? FolderTreeNaming.FullName(spData) : spouseUid.ToString(),
                             TargetLocation: spData?.Location ?? string.Empty);
                     }
                 }

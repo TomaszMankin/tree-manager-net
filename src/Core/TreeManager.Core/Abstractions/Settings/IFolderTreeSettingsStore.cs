@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace TreeManager.Core.Abstractions.Settings;
 
@@ -6,7 +6,7 @@ namespace TreeManager.Core.Abstractions.Settings;
 /// Persists Drzewo-specific settings per tree root.
 /// Reads/writes <c>&lt;rootPath&gt;/.PyTreeManager/settings.json</c>.
 /// </summary>
-public interface IDrzewoSettingsStore
+public interface IFolderTreeSettingsStore
 {
     /// <summary>
     /// Returns the persisted root-person Guid for <paramref name="rootPath"/>.

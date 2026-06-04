@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -12,7 +12,7 @@ namespace TreeManager.Infrastructure.Settings;
 /// Persists Drzewo-specific settings per tree root at &lt;rootPath&gt;/.PyTreeManager/settings.json.
 /// Uses JSON read-modify-write via JsonNode to preserve unknown keys (forward-compat for future settings).
 /// </summary>
-public sealed class DrzewoSettingsStore : IDrzewoSettingsStore
+public sealed class FolderTreeSettingsStore : IFolderTreeSettingsStore
 {
     private const string RuntimeFolderName = ".PyTreeManager";
     private const string SettingsFileName = "settings.json";
@@ -21,7 +21,7 @@ public sealed class DrzewoSettingsStore : IDrzewoSettingsStore
     private readonly IFileSystemFacade _fs;
     private readonly ILogger _log;
 
-    public DrzewoSettingsStore(IFileSystemFacade fs, ILogger log)
+    public FolderTreeSettingsStore(IFileSystemFacade fs, ILogger log)
     {
         _fs = fs;
         _log = log;
@@ -57,7 +57,7 @@ public sealed class DrzewoSettingsStore : IDrzewoSettingsStore
         }
         catch (Exception ex)
         {
-            _log.Warning(ex, "DrzewoSettingsStore: failed to read {Path}; returning Guid.Empty", path);
+            _log.Warning(ex, "FolderTreeSettingsStore: failed to read {Path}; returning Guid.Empty", path);
             return Guid.Empty;
         }
     }

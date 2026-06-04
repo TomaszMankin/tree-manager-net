@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace TreeManager.Core.Abstractions.Services;
 
 /// <summary>Generates the Drzewo folder-tree view for a given root person.</summary>
-public interface IDrzewoGenerator
+public interface IFolderTreeGenerator
 {
     /// <summary>
     /// Scans <paramref name="rootPath"/>, computes membership from <paramref name="rootPersonId"/>,

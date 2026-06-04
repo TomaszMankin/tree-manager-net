@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Moq;
 using Serilog;
@@ -8,21 +8,21 @@ using TreeManager.Infrastructure.Settings;
 
 namespace TreeManager.Infrastructure.L0.Settings;
 
-public class DrzewoSettingsStoreTests
+public class FolderTreeSettingsStoreTests
 {
     private const string FakeRoot = @"C:\fake\root";
     private const string SettingsPath = @"C:\fake\root\.PyTreeManager\settings.json";
 
     private readonly Mock<IFileSystemFacade> _mockFs;
     private readonly Mock<ILogger> _mockLog;
-    private readonly DrzewoSettingsStore _sut;
+    private readonly FolderTreeSettingsStore _sut;
 
-    public DrzewoSettingsStoreTests()
+    public FolderTreeSettingsStoreTests()
     {
         _mockFs = new Mock<IFileSystemFacade>();
         _mockLog = new Mock<ILogger>();
 
-        _sut = new DrzewoSettingsStore(_mockFs.Object, _mockLog.Object);
+        _sut = new FolderTreeSettingsStore(_mockFs.Object, _mockLog.Object);
     }
 
     [Fact]

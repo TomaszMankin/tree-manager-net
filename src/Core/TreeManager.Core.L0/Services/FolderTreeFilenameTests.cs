@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Domain;
 using TreeManager.Core.Services;
 
 namespace TreeManager.Core.L0.Services;
 
-public class DrzewoFilenameTests
+public class FolderTreeFilenameTests
 {
     #region CoupleCode
 
@@ -14,7 +14,7 @@ public class DrzewoFilenameTests
     public void CoupleCode_ReturnsA_WhenIndexZeroAndFiveCouples()
     {
         //Arrange + Act
-        var result = DrzewoNaming.CoupleCode(0, 5);
+        var result = FolderTreeNaming.CoupleCode(0, 5);
 
         //Assert
         Assert.Equal("A", result);
@@ -25,7 +25,7 @@ public class DrzewoFilenameTests
     public void CoupleCode_ReturnsAA_WhenTwentySevenCouples()
     {
         //Arrange + Act
-        var result = DrzewoNaming.CoupleCode(0, 27);
+        var result = FolderTreeNaming.CoupleCode(0, 27);
 
         //Assert
         Assert.Equal("AA", result);
@@ -36,7 +36,7 @@ public class DrzewoFilenameTests
     public void CoupleCode_ReturnsBA_WhenIndex26AndTwentySevenCouples()
     {
         //Arrange + Act
-        var result = DrzewoNaming.CoupleCode(26, 27);
+        var result = FolderTreeNaming.CoupleCode(26, 27);
 
         //Assert
         Assert.Equal("BA", result);
@@ -47,7 +47,7 @@ public class DrzewoFilenameTests
     public void CoupleCode_ReturnsAAA_WhenSixHundredSeventySevenCouples()
     {
         //Arrange + Act
-        var result = DrzewoNaming.CoupleCode(0, 677);
+        var result = FolderTreeNaming.CoupleCode(0, 677);
 
         //Assert
         Assert.Equal("AAA", result);
@@ -71,7 +71,7 @@ public class DrzewoFilenameTests
         };
 
         //Act
-        var result = DrzewoNaming.FullName(meFile);
+        var result = FolderTreeNaming.FullName(meFile);
 
         //Assert
         Assert.Equal("Anna Kowalska zd. Nowak", result);
@@ -89,7 +89,7 @@ public class DrzewoFilenameTests
         };
 
         //Act
-        var result = DrzewoNaming.FullName(meFile);
+        var result = FolderTreeNaming.FullName(meFile);
 
         //Assert
         Assert.Contains("(nieznane)", result);
@@ -107,7 +107,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: 0, coupleIndex: 0, total: 1, gender: "M", fullName: "Jan Kowalski");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Equal("[50][0][M] Jan Kowalski.lnk", result);
@@ -121,7 +121,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: 1, coupleIndex: 0, total: 1, gender: "M", fullName: "Piotr Kowalski");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Equal("[51][-1][A][M] Piotr Kowalski.lnk", result);
@@ -135,7 +135,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: -1, coupleIndex: 0, total: 1, gender: "F", fullName: "Kasia Nowak");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Equal("[49][1][A][F] Kasia Nowak.lnk", result);
@@ -149,7 +149,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: 0, coupleIndex: 0, total: 1, gender: string.Empty, fullName: "Jan Kowalski");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Contains("[M]", result);
@@ -163,7 +163,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: 0, coupleIndex: 0, total: 1, gender: "M", fullName: "Jan:Kowalski");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Contains("Jan_Kowalski", result);
@@ -178,7 +178,7 @@ public class DrzewoFilenameTests
         var member = BuildMember(gen: 0, coupleIndex: 0, total: 1, gender: "M", fullName: "Władysław Łęczycki");
 
         //Act
-        var result = DrzewoNaming.RenderFilename(member);
+        var result = FolderTreeNaming.RenderFilename(member);
 
         //Assert
         Assert.Contains("Władysław Łęczycki", result);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -7,7 +7,7 @@ using TreeManager.Core.Domain;
 namespace TreeManager.Core.Services;
 
 /// <summary>Pure helpers for Drzewo filename encoding — couple code, full name, filename render.</summary>
-public static class DrzewoNaming
+public static class FolderTreeNaming
 {
     private const string UnknownSentinel = "(nieznane)";
 
