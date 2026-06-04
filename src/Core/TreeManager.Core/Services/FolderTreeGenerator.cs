@@ -83,7 +83,7 @@ public sealed class FolderTreeGenerator : IFolderTreeGenerator
         foreach (var member in members)
         {
             var baseFilename = FolderTreeNaming.RenderFilename(member);
-            var filename = DeduplicateFilename(baseFilename, seen);
+            var filename = FolderTreeNaming.Deduplicate(baseFilename, seen);
             seen.Add(filename);
 
             var lnkPath = Path.Combine(outputPath, filename);
@@ -527,31 +527,6 @@ public sealed class FolderTreeGenerator : IFolderTreeGenerator
         if (sex == Sex.Male) { return "M"; }
         if (sex == Sex.Female) { return "F"; }
         return string.Empty;
-    }
-
-    private static string DeduplicateFilename(string filename, HashSet<string> seen)
-    {
-        if (!seen.Contains(filename))
-        {
-            return filename;
-        }
-
-        // Strip .lnk, append (N), re-add .lnk
-        string withoutExt = filename.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
-            ? filename[..^4]
-            : filename;
-
-        int n = 2;
-        while (true)
-        {
-            string candidate = $"{withoutExt} ({n}).lnk";
-            if (!seen.Contains(candidate))
-            {
-                return candidate;
-            }
-
-            n++;
-        }
     }
 
     #endregion

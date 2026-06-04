@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using TreeManager.Core.Domain;
 
 namespace TreeManager.Core.Abstractions.Services;
 
@@ -12,4 +13,14 @@ public interface IFolderTreeGenerator
     /// Returns the count of written shortcuts and any build-log messages.
     /// </summary>
     (int Written, IReadOnlyList<string> Log) Generate(string rootPath, Guid rootPersonId);
+
+    /// <summary>
+    /// Computes the Drzewo membership (hourglass DFS) for <paramref name="rootPersonId"/>
+    /// using the pre-built <paramref name="peopleByUid"/> map.
+    /// Returns the ordered member list and any build-log messages.
+    /// Consumed by both <see cref="Generate"/> and the lineage folder generator for token reuse.
+    /// </summary>
+    (IReadOnlyList<FolderTreeMember> Members, IReadOnlyList<string> Log) ComputeMembership(
+        Guid rootPersonId,
+        IReadOnlyDictionary<Guid, MeFile> peopleByUid);
 }
