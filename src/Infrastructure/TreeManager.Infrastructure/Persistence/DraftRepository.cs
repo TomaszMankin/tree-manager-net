@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Serilog;
@@ -66,7 +66,7 @@ public sealed class DraftRepository : IDraftRepository
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Failed to read draft at {Path}", meFilePath);
+                _log.Error(ex, "Failed to read draft at {Path}", meFilePath);
             }
         }
 

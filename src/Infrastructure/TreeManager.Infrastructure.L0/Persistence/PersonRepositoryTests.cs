@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Moq;
 using Serilog;
@@ -108,7 +108,7 @@ public class PersonRepositoryTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Create_ContinuesAfterRelatedFileFailure_WhenWriteThrows()
+    public void Create_LogsError_WhenRelatedFileWriteThrows()
     {
         //Arrange
         var person = BuildPersonWithParent("Jan Kowalski", RelatedId);
@@ -124,7 +124,7 @@ public class PersonRepositoryTests
         //Assert — own file still written and failure was logged
         _processor.Verify(x => x.WriteMeFile(PersonMeJson, person), Times.Once());
         _mockLogger.Verify(
-            x => x.Warning(It.IsAny<Exception>(), "Failed to sync relationship to {Path}", It.IsAny<string>()),
+            x => x.Error(It.IsAny<Exception>(), "Failed to sync relationship to {Path}", It.IsAny<string>()),
             Times.Once());
     }
 
@@ -259,7 +259,7 @@ public class PersonRepositoryTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Update_ContinuesAfterRelatedFileFailure_WhenWriteThrows()
+    public void Update_LogsError_WhenRelatedFileWriteThrows()
     {
         //Arrange
         var snapshot = BuildPerson("Jan Kowalski");
@@ -282,7 +282,7 @@ public class PersonRepositoryTests
         //Assert — own file written; failure logged
         _processor.Verify(x => x.WriteMeFile(PersonMeJson, person), Times.Once());
         _mockLogger.Verify(
-            x => x.Warning(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()),
+            x => x.Error(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Once());
     }
 
@@ -336,7 +336,7 @@ public class PersonRepositoryTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Update_LogsWarning_WhenNamePropagationFails()
+    public void Update_LogsError_WhenNamePropagationFails()
     {
         //Arrange
         var snapshot = BuildPerson("Jan Kowalski");
@@ -358,7 +358,7 @@ public class PersonRepositoryTests
 
         //Assert
         _mockLogger.Verify(
-            x => x.Warning(It.IsAny<Exception>(), "Failed to propagate name change to {Path}", RelatedMeJson),
+            x => x.Error(It.IsAny<Exception>(), "Failed to propagate name change to {Path}", RelatedMeJson),
             Times.Once());
     }
 

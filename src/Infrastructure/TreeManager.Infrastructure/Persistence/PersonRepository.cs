@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using TreeManager.Core.Abstractions.IO;
@@ -112,7 +112,7 @@ public sealed class PersonRepository : IPersonRepository
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Failed to propagate name change to {Path}", kvp.Value);
+                _log.Error(ex, "Failed to propagate name change to {Path}", kvp.Value);
             }
         }
     }
@@ -163,7 +163,7 @@ public sealed class PersonRepository : IPersonRepository
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Failed to sync relationship to {Path}", relatedPath);
+                _log.Error(ex, "Failed to sync relationship to {Path}", relatedPath);
             }
         }
     }
@@ -213,7 +213,7 @@ public sealed class PersonRepository : IPersonRepository
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Failed to index me.json at {Path}", path);
+                _log.Error(ex, "Failed to index me.json at {Path}", path);
             }
         }
         return index;
@@ -244,7 +244,7 @@ public sealed class PersonRepository : IPersonRepository
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "Failed to sync relationship to {Path}", relatedPath);
+                _log.Error(ex, "Failed to sync relationship to {Path}", relatedPath);
             }
         }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Serilog;
 using TreeManager.Core.Abstractions.IO;
@@ -56,7 +56,7 @@ public sealed class DraftPromoter : IDraftPromoter
                 }
                 catch (Exception cleanupEx)
                 {
-                    _log.Warning(cleanupEx, "Failed to clean up partial destination {Folder}", destinationFolder);
+                    _log.Error(cleanupEx, "Failed to clean up partial destination {Folder}", destinationFolder);
                 }
             }
 

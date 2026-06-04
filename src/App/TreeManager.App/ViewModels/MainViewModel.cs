@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,9 +11,12 @@ using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
 
+/// <summary>Main application ViewModel — coordinates person editing, draft management, and Drzewo generation.</summary>
 public sealed partial class MainViewModel : ObservableObject
 {
     private const string PeopleListFolderName = "Lista osób";
+    private const string GenerateFolderTreeSuccessTemplate = "Wygenerowano drzewo: {0} skrótów.";
+    private const string GenerateFolderTreeErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -23,6 +26,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IPersonRepository _personRepository;
     private readonly IRootPointerStore _rootPointerStore;
     private readonly PersonEditDependencies _editDeps;
+    private readonly FolderTreeCommandDependencies _folderTreeDeps;
     private readonly ILogger _log;
 
     private MeFile _originalSnapshot;
@@ -35,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         IPersonRepository personRepository,
         IRootPointerStore rootPointerStore,
         PersonEditDependencies editDeps,
+        FolderTreeCommandDependencies folderTreeDeps,
         ILogger log)
     {
         Person = person;
@@ -44,6 +49,7 @@ public sealed partial class MainViewModel : ObservableObject
         _personRepository = personRepository;
         _rootPointerStore = rootPointerStore;
         _editDeps = editDeps;
+        _folderTreeDeps = folderTreeDeps;
         _log = log;
     }
 
@@ -55,6 +61,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _errorMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _statusMessage = string.Empty;
 
     [RelayCommand]
     private void SwitchMode(AppMode targetMode)
@@ -279,6 +288,43 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _log.Error(ex, "PromoteDraft failed");
             ErrorMessage = "Nie udało się przenieść szkicu do drzewa. Spróbuj ponownie.";
+        }
+    }
+
+    [RelayCommand]
+    private void GenerateFolderTree()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("GenerateFolderTree called with empty root path");
+            return;
+        }
+
+        var people = _editDeps.DirectoryService.GetAll(rootPath);
+        var selected = _editDeps.PickerService.PickPerson(people);
+        if (selected == null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
+            var result = _folderTreeDeps.Generator.Generate(rootPath, selected.UniqueIdentifier);
+            ErrorMessage = string.Empty;
+            StatusMessage = string.Format(GenerateFolderTreeSuccessTemplate, result.Written);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "GenerateFolderTree failed");
+            ErrorMessage = GenerateFolderTreeErrorMessage;
+            StatusMessage = string.Empty;
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 

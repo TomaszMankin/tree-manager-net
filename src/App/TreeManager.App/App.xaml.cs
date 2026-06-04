@@ -1,15 +1,18 @@
-using System.Windows;
+﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using TreeManager.App.Services;
 using TreeManager.App.Startup;
 using TreeManager.App.ViewModels;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
+using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
+using TreeManager.Core.Abstractions.Shell;
 using TreeManager.Core.Services;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
+using TreeManager.Infrastructure.Shell;
 using Serilog;
 
 namespace TreeManager.App;
@@ -59,6 +62,10 @@ public partial class App : Application
         services.AddSingleton<IDraftRepository, DraftRepository>();
         services.AddSingleton<IDraftPromoter, DraftPromoter>();
         services.AddSingleton<PersonEditDependencies>();
+        services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
+        services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
+        services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
+        services.AddSingleton<FolderTreeCommandDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
         services.AddTransient<OptionalDatePickerViewModel>();
