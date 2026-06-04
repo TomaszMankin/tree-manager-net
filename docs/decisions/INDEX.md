@@ -15,3 +15,4 @@
 | 011 | Relationship display-name propagation on update | Accepted | 2026-05-31 |
 | 012 | Dirty-tracking strategy — snapshot equality | Accepted | 2026-06-02 |
 | 013 | Drafts live in a sibling staging folder, isolated until promoted | Accepted | 2026-06-04 |
+| 014 | Shortcut creation via the wide shell-link COM interface | Accepted | 2026-06-04 |

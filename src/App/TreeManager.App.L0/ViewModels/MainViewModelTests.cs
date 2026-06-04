@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Moq;
 using Serilog;
@@ -6,6 +7,7 @@ using TreeManager.App.Services;
 using TreeManager.App.ViewModels;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.Persistence;
+using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
 using TreeManager.Core.Domain;
 
@@ -24,6 +26,8 @@ public class MainViewModelTests
     private readonly Mock<IDirtyGuardService> _mockDirtyGuard;
     private readonly Mock<IDraftRepository> _mockDraftRepository;
     private readonly Mock<IDraftPromoter> _mockDraftPromoter;
+    private readonly Mock<IDrzewoGenerator> _mockDrzewoGenerator;
+    private readonly Mock<IDrzewoSettingsStore> _mockDrzewoSettings;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -38,12 +42,19 @@ public class MainViewModelTests
         _mockDirtyGuard = new Mock<IDirtyGuardService>();
         _mockDraftRepository = new Mock<IDraftRepository>();
         _mockDraftPromoter = new Mock<IDraftPromoter>();
+        _mockDrzewoGenerator = new Mock<IDrzewoGenerator>();
+        _mockDrzewoSettings = new Mock<IDrzewoSettingsStore>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
 
         // Default: not dirty — existing tests proceed unchanged
         _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
+
+        // Default: Generate returns success
+        _mockDrzewoGenerator
+            .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
+            .Returns((5, new List<string>()));
 
         var deps = new PersonEditDependencies(
             _mockDirectoryService.Object,
@@ -54,6 +65,10 @@ public class MainViewModelTests
             _mockDraftRepository.Object,
             _mockDraftPromoter.Object);
 
+        var drzewoDeps = new DrzewoCommandDependencies(
+            _mockDrzewoGenerator.Object,
+            _mockDrzewoSettings.Object);
+
         _sut = new MainViewModel(
             new PersonViewModel(),
             new DatesTabViewModel(),
@@ -62,6 +77,7 @@ public class MainViewModelTests
             _mockPersonRepository.Object,
             _mockRootPointerStore.Object,
             deps,
+            drzewoDeps,
             _mockLog.Object);
     }
 
@@ -905,6 +921,143 @@ public class MainViewModelTests
 
         //Assert
         _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+    }
+
+    #endregion
+
+    #region GenerateDrzewo
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_CallsPickerWithDirectoryPeople_WhenInvoked()
+    {
+        //Arrange
+        var people = new List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Adam Kowalski") };
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(people);
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns(people[0]);
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        _mockDirectoryService.Verify(s => s.GetAll(FakeRoot), Times.Once());
+        _mockPickerService.Verify(s => s.PickPerson(people), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_DoesNothing_WhenPickerReturnsNull()
+    {
+        //Arrange
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns((PersonSummary)null);
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        _mockDrzewoGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+        _mockDrzewoSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_PersistsSelectedRootPerson_WhenPersonChosen()
+    {
+        //Arrange
+        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns(chosen);
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        _mockDrzewoSettings.Verify(s => s.SetRootPersonId(FakeRoot, chosen.UniqueIdentifier), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_CallsGenerateWithRootPathAndChosenGuid_WhenPersonChosen()
+    {
+        //Arrange
+        var chosen = new PersonSummary(Guid.NewGuid(), "Eva Nowakowska");
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns(chosen);
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        _mockDrzewoGenerator.Verify(g => g.Generate(FakeRoot, chosen.UniqueIdentifier), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_ShowsPolishSuccess_WhenGenerateSucceeds()
+    {
+        //Arrange
+        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns(chosen);
+        _mockDrzewoGenerator
+            .Setup(g => g.Generate(FakeRoot, chosen.UniqueIdentifier))
+            .Returns((7, new List<string>()));
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        Assert.Contains("7", _sut.StatusMessage);
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_ShowsPolishError_WhenGenerateThrows()
+    {
+        //Arrange
+        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
+        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
+        _mockPickerService
+            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
+            .Returns(chosen);
+        _mockDrzewoGenerator
+            .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("drzewa", _sut.ErrorMessage);
+        _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateDrzewo_DoesNothing_WhenRootPathEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.GenerateDrzewoCommand.Execute(null);
+
+        //Assert
+        _mockDrzewoGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+        _mockPickerService.Verify(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()), Times.Never());
     }
 
     #endregion

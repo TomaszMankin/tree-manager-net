@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <IsPackable>false</IsPackable>
     <AssemblyName>TreeManager.Infrastructure.L0</AssemblyName>
     <RootNamespace>TreeManager.Infrastructure.L0</RootNamespace>
