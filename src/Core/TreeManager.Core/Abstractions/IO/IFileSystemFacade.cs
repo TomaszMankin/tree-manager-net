@@ -33,4 +33,7 @@ public interface IFileSystemFacade
 
     /// <summary>Deletes the directory at <paramref name="path"/>.</summary>
     void DeleteDirectory(string path, bool recursive = false);
+
+    /// <summary>Appends <paramref name="content"/> to the file at <paramref name="path"/> (UTF-8 without BOM).</summary>
+    void AppendAllText(string path, string content);
 }

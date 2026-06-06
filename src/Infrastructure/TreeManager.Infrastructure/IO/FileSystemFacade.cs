@@ -41,4 +41,7 @@ public sealed class FileSystemFacade : IFileSystemFacade
 
     /// <inheritdoc/>
     public void DeleteDirectory(string path, bool recursive = false) => Directory.Delete(path, recursive);
+
+    /// <inheritdoc/>
+    public void AppendAllText(string path, string content) => File.AppendAllText(path, content, Utf8NoBom);
 }

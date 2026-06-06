@@ -32,6 +32,20 @@ jobs:
         with:
           tier: L1
 
+      - name: Live SMTP test
+        shell: pwsh
+        env:
+          SMTP_USERNAME: ${{ secrets.L1_EMAIL_RECIPIENT }}
+          SMTP_APP_PASSWORD: ${{ secrets.L1_EMAIL_PASSWORD }}
+          SMTP_RECIPIENT: ${{ secrets.L1_EMAIL_RECIPIENT }}
+        run: |
+          dotnet test TreeManager.sln `
+            --configuration Release `
+            --no-build `
+            --filter "Tier=LiveSmtp" `
+            --logger "trx;LogFileName=LiveSmtp.trx" `
+            --results-directory test-results/LiveSmtp
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
