@@ -96,9 +96,9 @@ public partial class App : Application
             fs.CreateDirectory(Path.GetDirectoryName(fallbackPath));
             fs.AppendAllText(fallbackPath, $"{DateTime.Now:u} [CRASH] {ex}{Environment.NewLine}");
         }
-        catch
+        catch (Exception writeEx)
         {
-            // best-effort; do not recurse
+            Log.Logger.Error(writeEx, "App: fallback crash log write failed");
         }
 
         if (Application.Current?.Dispatcher.CheckAccess() == true)

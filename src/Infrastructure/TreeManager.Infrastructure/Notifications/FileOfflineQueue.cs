@@ -75,7 +75,7 @@ public sealed class FileOfflineQueue : IOfflineQueue
             }
             catch (Exception ex)
             {
-                _log.Warning(ex, "FileOfflineQueue.List: failed to deserialize {FilePath}; skipping", filePath);
+                _log.Error(ex, "FileOfflineQueue.List: failed to deserialize {FilePath}; skipping", filePath);
             }
         }
 
