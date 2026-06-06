@@ -6,19 +6,21 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:NotesTabViewModel}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="32,24" MaxWidth="580" HorizontalAlignment="Left">
-
-            <TextBlock Text="Notatki" Style="{StaticResource SectionHeader}"/>
-
-            <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto"
-                     MinHeight="200"
-                     Padding="6,4"
-                     FontSize="13"/>
-
-        </StackPanel>
-    </ScrollViewer>
+    <Grid Margin="32,24,32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="Notatki" Style="{StaticResource SectionHeader}"/>
+        <TextBox Grid.Row="1"
+                 Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 VerticalAlignment="Stretch"
+                 VerticalContentAlignment="Top"
+                 Height="Auto"
+                 Padding="8,6"
+                 FontSize="13"/>
+    </Grid>
 </UserControl>

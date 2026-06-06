@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using TreeManager.App.ViewModels;
 
@@ -16,19 +17,19 @@ public static class FolderNameGenerator
 
         sb.Append(string.IsNullOrEmpty(vm.FirstName) ? Unknown : vm.FirstName);
 
-        if (!string.IsNullOrEmpty(vm.OtherFirstNames))
+        if (vm.OtherFirstNames.Items.Count > 0)
         {
             sb.Append(' ');
-            sb.Append(vm.OtherFirstNames);
+            sb.Append(string.Join(";", vm.OtherFirstNames.Items));
         }
 
         sb.Append(' ');
         sb.Append(string.IsNullOrEmpty(vm.LastName) ? Unknown : vm.LastName);
 
-        if (!string.IsNullOrEmpty(vm.OtherLastNames))
+        if (vm.OtherLastNames.Items.Count > 0)
         {
             sb.Append(';');
-            sb.Append(vm.OtherLastNames);
+            sb.Append(string.Join(";", vm.OtherLastNames.Items));
         }
 
         if (vm.HasMaidenName)
@@ -36,10 +37,10 @@ public static class FolderNameGenerator
             sb.Append(" zd. ");
             sb.Append(vm.MaidenName);
 
-            if (!string.IsNullOrEmpty(vm.OtherMaidenNames))
+            if (vm.OtherMaidenNames.Items.Count > 0)
             {
                 sb.Append(';');
-                sb.Append(vm.OtherMaidenNames);
+                sb.Append(string.Join(";", vm.OtherMaidenNames.Items));
             }
         }
 

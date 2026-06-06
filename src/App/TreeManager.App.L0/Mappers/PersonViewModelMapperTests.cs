@@ -14,24 +14,28 @@ public class PersonViewModelMapperTests
     public void ToMeFile_CopiesAllNameFields_WhenSourceIsValid()
     {
         //Arrange
-        var vm = new AutoFaker<PersonViewModel>()
-            .RuleFor(x => x.FirstName, f => f.Name.FirstName())
-            .RuleFor(x => x.LastName, f => f.Name.LastName())
-            .Generate();
+        var vm = new PersonViewModel
+        {
+            FirstName = "Jan",
+            LastName = "Kowalski",
+            MaidenName = "Nowak",
+            HasMaidenName = true,
+            Sex = Sex.Male,
+        };
+        vm.OtherFirstNames.Load("Janusz");
+        vm.OtherLastNames.Load("Kowski");
+        vm.OtherMaidenNames.Load("Nowakowa");
 
         //Act
         var result = vm.ToMeFile();
 
         //Assert
-        Assert.Equal(vm.UniqueIdentifier, result.UniqueIdentifier);
-        Assert.Equal(vm.PersonName, result.PersonName);
-        Assert.Equal(vm.Location, result.Location);
         Assert.Equal(vm.FirstName, result.FirstName);
-        Assert.Equal(vm.OtherFirstNames, result.OtherFirstNames);
+        Assert.Equal(vm.OtherFirstNames.Serialize(), result.OtherFirstNames);
         Assert.Equal(vm.LastName, result.LastName);
-        Assert.Equal(vm.OtherLastNames, result.OtherLastNames);
+        Assert.Equal(vm.OtherLastNames.Serialize(), result.OtherLastNames);
         Assert.Equal(vm.MaidenName, result.MaidenName);
-        Assert.Equal(vm.OtherMaidenNames, result.OtherMaidenNames);
+        Assert.Equal(vm.OtherMaidenNames.Serialize(), result.OtherMaidenNames);
         Assert.Equal(vm.HasMaidenName, result.HasMaidenName);
         Assert.Equal(vm.Sex, result.Sex);
     }

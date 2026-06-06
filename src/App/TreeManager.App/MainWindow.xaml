@@ -51,15 +51,18 @@
         <Grid Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}">
             <TabControl Margin="0" Background="Transparent" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0">
                 <TabItem Header="1.  Dane osoby">
-                    <views:PersonDataTab DataContext="{Binding Person}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <views:PersonDataTab DataContext="{Binding Person}"/>
+                            <Separator Margin="32,0" Background="#E0E0E0"/>
+                            <views:DatesTab DataContext="{Binding Dates}"/>
+                        </StackPanel>
+                    </ScrollViewer>
                 </TabItem>
-                <TabItem Header="2.  Daty">
-                    <views:DatesTab DataContext="{Binding Dates}"/>
-                </TabItem>
-                <TabItem Header="3.  Rodzina">
+                <TabItem Header="2.  Rodzina">
                     <views:FamilyTab DataContext="{Binding Family}"/>
                 </TabItem>
-                <TabItem Header="4.  Notatki">
+                <TabItem Header="3.  Notatki">
                     <views:NotesTab DataContext="{Binding Notes}"/>
                 </TabItem>
             </TabControl>
