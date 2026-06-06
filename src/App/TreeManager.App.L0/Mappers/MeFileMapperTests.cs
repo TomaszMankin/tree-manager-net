@@ -23,11 +23,11 @@ public class MeFileMapperTests
         Assert.Equal(source.PersonName, result.PersonName);
         Assert.Equal(source.Location, result.Location);
         Assert.Equal(source.FirstName, result.FirstName);
-        Assert.Equal(source.OtherFirstNames, result.OtherFirstNames);
+        Assert.Equal(source.OtherFirstNames, result.OtherFirstNames.Serialize());
         Assert.Equal(source.LastName, result.LastName);
-        Assert.Equal(source.OtherLastNames, result.OtherLastNames);
+        Assert.Equal(source.OtherLastNames, result.OtherLastNames.Serialize());
         Assert.Equal(source.MaidenName, result.MaidenName);
-        Assert.Equal(source.OtherMaidenNames, result.OtherMaidenNames);
+        Assert.Equal(source.OtherMaidenNames, result.OtherMaidenNames.Serialize());
         Assert.Equal(source.HasMaidenName, result.HasMaidenName);
         Assert.Equal(source.Sex, result.Sex);
     }

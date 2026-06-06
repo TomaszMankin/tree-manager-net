@@ -12,12 +12,13 @@
         <Border DockPanel.Dock="Top" Background="#1565C0" Padding="22,14">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="TreeManager" FontSize="22" Foreground="White"
-                           FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"
+                           TextTrimming="CharacterEllipsis" MaxWidth="200"/>
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
                     <Button Content="Dodaj osobę"
                             Command="{Binding SwitchModeCommand}"
                             CommandParameter="{x:Static vm:AppMode.Add}"
@@ -40,7 +41,10 @@
                     <Button Content="Generuj Rody"
                             Command="{Binding GenerateLineageFoldersCommand}"
                             Margin="4,0" Padding="14,8"/>
-                </StackPanel>
+                    <Button Content="Sprawdź spójność"
+                            Command="{Binding ValidateTreeCommand}"
+                            Margin="4,0" Padding="14,8"/>
+                </WrapPanel>
             </Grid>
         </Border>
 
@@ -48,15 +52,18 @@
         <Grid Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}">
             <TabControl Margin="0" Background="Transparent" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0">
                 <TabItem Header="1.  Dane osoby">
-                    <views:PersonDataTab DataContext="{Binding Person}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <views:PersonDataTab DataContext="{Binding Person}"/>
+                            <Separator Margin="32,0" Background="#E0E0E0"/>
+                            <views:DatesTab DataContext="{Binding Dates}"/>
+                        </StackPanel>
+                    </ScrollViewer>
                 </TabItem>
-                <TabItem Header="2.  Daty">
-                    <views:DatesTab DataContext="{Binding Dates}"/>
-                </TabItem>
-                <TabItem Header="3.  Rodzina">
+                <TabItem Header="2.  Rodzina">
                     <views:FamilyTab DataContext="{Binding Family}"/>
                 </TabItem>
-                <TabItem Header="4.  Notatki">
+                <TabItem Header="3.  Notatki">
                     <views:NotesTab DataContext="{Binding Notes}"/>
                 </TabItem>
             </TabControl>

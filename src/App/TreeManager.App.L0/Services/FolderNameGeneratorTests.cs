@@ -112,8 +112,8 @@ public class FolderNameGeneratorTests
         {
             FirstName = "Jan",
             LastName = "Kowalski",
-            OtherLastNames = "Nowak",
         };
+        vm.OtherLastNames.Load("Nowak");
 
         //Act
         var result = vm.ToFolderName();
@@ -151,8 +151,8 @@ public class FolderNameGeneratorTests
             LastName = "Nowak",
             HasMaidenName = true,
             MaidenName = "Wiśniewska",
-            OtherMaidenNames = "Kowalska",
         };
+        vm.OtherMaidenNames.Load("Kowalska");
 
         //Act
         var result = vm.ToFolderName();

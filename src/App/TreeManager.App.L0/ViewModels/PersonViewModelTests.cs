@@ -47,11 +47,11 @@ public class PersonViewModelTests
         Assert.Equal("Jan Kowalski", vm.PersonName);
         Assert.Equal(@"C:\root\Lista osób\Jan Kowalski", vm.Location);
         Assert.Equal("Jan", vm.FirstName);
-        Assert.Equal("Janusz", vm.OtherFirstNames);
+        Assert.Equal(["Janusz"], vm.OtherFirstNames.Items);
         Assert.Equal("Kowalski", vm.LastName);
-        Assert.Equal("Kowski", vm.OtherLastNames);
+        Assert.Equal(["Kowski"], vm.OtherLastNames.Items);
         Assert.Equal("Nowak", vm.MaidenName);
-        Assert.Equal("Nowakowa", vm.OtherMaidenNames);
+        Assert.Equal(["Nowakowa"], vm.OtherMaidenNames.Items);
         Assert.True(vm.HasMaidenName);
         Assert.Equal(Sex.Male, vm.Sex);
     }

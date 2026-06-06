@@ -9,7 +9,9 @@ using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
+using TreeManager.Core.Abstractions.Validation;
 using TreeManager.Core.Domain;
+using TreeManager.Core.Validation;
 
 namespace TreeManager.App.L0.ViewModels;
 
@@ -29,6 +31,10 @@ public class MainViewModelTests
     private readonly Mock<IFolderTreeGenerator> _mockFolderTreeGenerator;
     private readonly Mock<IFolderTreeSettingsStore> _mockFolderTreeSettings;
     private readonly Mock<ILineageFolderGenerator> _mockLineageFolderGenerator;
+    private readonly Mock<ITreeConsistencyValidator> _mockValidator;
+    private readonly Mock<IValidationMessageFormatter> _mockFormatter;
+    private readonly Mock<IValidationReportService> _mockReportService;
+    private readonly Mock<IMeFileProcessor> _mockProcessor;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -46,6 +52,10 @@ public class MainViewModelTests
         _mockFolderTreeGenerator = new Mock<IFolderTreeGenerator>();
         _mockFolderTreeSettings = new Mock<IFolderTreeSettingsStore>();
         _mockLineageFolderGenerator = new Mock<ILineageFolderGenerator>();
+        _mockValidator = new Mock<ITreeConsistencyValidator>();
+        _mockFormatter = new Mock<IValidationMessageFormatter>();
+        _mockReportService = new Mock<IValidationReportService>();
+        _mockProcessor = new Mock<IMeFileProcessor>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
@@ -63,6 +73,21 @@ public class MainViewModelTests
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
             .Returns((3, new List<string>()));
 
+        // Default: validator returns no issues
+        _mockValidator
+            .Setup(v => v.Validate(It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(new List<ValidationIssue>());
+
+        // Default: formatter returns empty list
+        _mockFormatter
+            .Setup(f => f.Format(It.IsAny<IReadOnlyList<ValidationIssue>>(), It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(new List<string>());
+
+        // Default: ScanMeFiles returns empty
+        _mockProcessor
+            .Setup(p => p.ScanMeFiles(It.IsAny<string>()))
+            .Returns(new List<string>());
+
         var deps = new PersonEditDependencies(
             _mockDirectoryService.Object,
             _mockPickerService.Object,
@@ -77,6 +102,12 @@ public class MainViewModelTests
             _mockFolderTreeSettings.Object,
             _mockLineageFolderGenerator.Object);
 
+        var validationDeps = new ValidationCommandDependencies(
+            _mockValidator.Object,
+            _mockFormatter.Object,
+            _mockReportService.Object,
+            _mockProcessor.Object);
+
         _sut = new MainViewModel(
             new PersonViewModel(),
             new DatesTabViewModel(),
@@ -86,6 +117,7 @@ public class MainViewModelTests
             _mockRootPointerStore.Object,
             deps,
             folderTreeDeps,
+            validationDeps,
             _mockLog.Object);
     }
 
@@ -1066,6 +1098,126 @@ public class MainViewModelTests
         //Assert
         _mockFolderTreeGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
         _mockPickerService.Verify(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()), Times.Never());
+    }
+
+    #endregion
+
+    #region ValidateTree
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_CallsValidatorWithBuiltMap_WhenInvoked()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var meFile = PersonFixtureFactory.Build(personId, "Jan", "Kowalski", Sex.Male);
+        var fakePath = @"C:\fake\root\Lista osób\Jan Kowalski\me.json";
+
+        _mockProcessor.Setup(p => p.ScanMeFiles(FakeRoot)).Returns(new List<string> { fakePath });
+        _mockProcessor.Setup(p => p.ReadMeFile(fakePath)).Returns(meFile);
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert
+        _mockValidator.Verify(
+            v => v.Validate(It.Is<IReadOnlyDictionary<Guid, MeFile>>(m => m.ContainsKey(personId))),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_FormatsValidatorOutput_WhenIssuesFound()
+    {
+        //Arrange
+        var idA = Guid.NewGuid();
+        var issues = new List<ValidationIssue>
+        {
+            new() { Kind = ValidationIssueKind.Orphan, Subjects = [idA] },
+            new() { Kind = ValidationIssueKind.Orphan, Subjects = [Guid.NewGuid()] },
+        };
+        _mockValidator
+            .Setup(v => v.Validate(It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(issues);
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert
+        _mockFormatter.Verify(
+            f => f.Format(
+                It.Is<IReadOnlyList<ValidationIssue>>(list => list.Count == 2),
+                It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_ShowsReport_WhenInvoked()
+    {
+        //Arrange
+        var expectedMessages = new List<string> { "Cykl: Jan Kowalski → Anna Nowak" };
+        _mockFormatter
+            .Setup(f => f.Format(It.IsAny<IReadOnlyList<ValidationIssue>>(), It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(expectedMessages);
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert
+        _mockReportService.Verify(s => s.Show(expectedMessages), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_ShowsReportWithNoIssues_WhenTreeClean()
+    {
+        //Arrange — validator returns empty, formatter returns empty
+        _mockValidator
+            .Setup(v => v.Validate(It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(new List<ValidationIssue>());
+        _mockFormatter
+            .Setup(f => f.Format(It.IsAny<IReadOnlyList<ValidationIssue>>(), It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()))
+            .Returns(new List<string>());
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert — report shown even when empty (user gets "no problems" confirmation)
+        _mockReportService.Verify(s => s.Show(It.IsAny<IReadOnlyList<string>>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_DoesNothing_WhenRootPathEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert
+        _mockValidator.Verify(v => v.Validate(It.IsAny<IReadOnlyDictionary<Guid, MeFile>>()), Times.Never());
+        _mockReportService.Verify(s => s.Show(It.IsAny<IReadOnlyList<string>>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ValidateTree_SetsError_WhenScanThrows()
+    {
+        //Arrange
+        _mockProcessor
+            .Setup(p => p.ScanMeFiles(It.IsAny<string>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.ValidateTreeCommand.Execute(null);
+
+        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        _mockReportService.Verify(s => s.Show(It.IsAny<IReadOnlyList<string>>()), Times.Never());
+        _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
     }
 
     #endregion

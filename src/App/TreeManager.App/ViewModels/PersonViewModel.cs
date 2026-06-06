@@ -1,6 +1,5 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using TreeManager.App.Mappers;
 using TreeManager.Core.Domain;
 
 namespace TreeManager.App.ViewModels;
@@ -10,20 +9,17 @@ public sealed partial class PersonViewModel : ObservableObject
     [ObservableProperty]
     private string _firstName = string.Empty;
 
-    [ObservableProperty]
-    private string _otherFirstNames = string.Empty;
+    public StringListViewModel OtherFirstNames { get; } = new();
 
     [ObservableProperty]
     private string _lastName = string.Empty;
 
-    [ObservableProperty]
-    private string _otherLastNames = string.Empty;
+    public StringListViewModel OtherLastNames { get; } = new();
 
     [ObservableProperty]
     private string _maidenName = string.Empty;
 
-    [ObservableProperty]
-    private string _otherMaidenNames = string.Empty;
+    public StringListViewModel OtherMaidenNames { get; } = new();
 
     [ObservableProperty]
     private bool _hasMaidenName;
@@ -42,17 +38,16 @@ public sealed partial class PersonViewModel : ObservableObject
 
     public void Reset(MeFile meFile)
     {
-        var mapped = meFile.ToViewModel();
-        UniqueIdentifier = mapped.UniqueIdentifier;
-        PersonName = mapped.PersonName;
-        Location = mapped.Location;
-        FirstName = mapped.FirstName;
-        OtherFirstNames = mapped.OtherFirstNames;
-        LastName = mapped.LastName;
-        OtherLastNames = mapped.OtherLastNames;
-        MaidenName = mapped.MaidenName;
-        OtherMaidenNames = mapped.OtherMaidenNames;
-        HasMaidenName = mapped.HasMaidenName;
-        Sex = mapped.Sex;
+        UniqueIdentifier = meFile.UniqueIdentifier;
+        PersonName = meFile.PersonName;
+        Location = meFile.Location;
+        FirstName = meFile.FirstName;
+        OtherFirstNames.Load(meFile.OtherFirstNames);
+        LastName = meFile.LastName;
+        OtherLastNames.Load(meFile.OtherLastNames);
+        MaidenName = meFile.MaidenName;
+        OtherMaidenNames.Load(meFile.OtherMaidenNames);
+        HasMaidenName = meFile.HasMaidenName;
+        Sex = meFile.Sex;
     }
 }
