@@ -18,3 +18,4 @@
 | 014 | Shortcut creation via the wide shell-link COM interface | Accepted | 2026-06-04 |
 | 015 | Lineage folder naming: surname-clash full-name escalation | Accepted | 2026-06-04 |
 | 016 | Tree integrity: fail-fast on detected corruption | Accepted | 2026-06-04 |
+| 017 | Validation data/display split | Accepted | 2026-06-06 |

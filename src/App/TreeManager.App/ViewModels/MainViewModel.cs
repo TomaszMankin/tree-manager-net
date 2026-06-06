@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,7 @@ public sealed partial class MainViewModel : ObservableObject
     private const string GenerateLineageSuccessTemplate = "Wygenerowano rody: {0} skrótów.";
     private const string GenerateLineageErrorMessage = "Nie udało się wygenerować rodów. Spróbuj ponownie.";
     private const string GenerateLineageIntegrityErrorMessage = "Błąd integralności drzewa. Dane zostały zmienione poza aplikacją.";
+    private const string ValidateTreeErrorMessage = "Nie udało się sprawdzić spójności drzewa. Spróbuj ponownie.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -30,6 +32,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IRootPointerStore _rootPointerStore;
     private readonly PersonEditDependencies _editDeps;
     private readonly FolderTreeCommandDependencies _folderTreeDeps;
+    private readonly ValidationCommandDependencies _validationDeps;
     private readonly ILogger _log;
 
     private MeFile _originalSnapshot;
@@ -43,6 +46,7 @@ public sealed partial class MainViewModel : ObservableObject
         IRootPointerStore rootPointerStore,
         PersonEditDependencies editDeps,
         FolderTreeCommandDependencies folderTreeDeps,
+        ValidationCommandDependencies validationDeps,
         ILogger log)
     {
         Person = person;
@@ -53,6 +57,7 @@ public sealed partial class MainViewModel : ObservableObject
         _rootPointerStore = rootPointerStore;
         _editDeps = editDeps;
         _folderTreeDeps = folderTreeDeps;
+        _validationDeps = validationDeps;
         _log = log;
     }
 
@@ -372,6 +377,54 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private void ValidateTree()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("ValidateTree called with empty root path");
+            return;
+        }
+
+        try
+        {
+            var people = BuildPeopleMap(rootPath);
+            var issues = _validationDeps.Validator.Validate(people);
+            var messages = _validationDeps.Formatter.Format(issues, people);
+            _validationDeps.ReportService.Show(messages);
+            ErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "ValidateTree failed");
+            ErrorMessage = ValidateTreeErrorMessage;
+        }
+    }
+
+    private Dictionary<Guid, MeFile> BuildPeopleMap(string rootPath)
+    {
+        var map = new Dictionary<Guid, MeFile>();
+
+        foreach (var path in _validationDeps.Processor.ScanMeFiles(rootPath))
+        {
+            try
+            {
+                var meFile = _validationDeps.Processor.ReadMeFile(path);
+                if (meFile.UniqueIdentifier != Guid.Empty)
+                {
+                    map[meFile.UniqueIdentifier] = meFile;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "BuildPeopleMap: failed to read {Path}", path);
+            }
+        }
+
+        return map;
     }
 
     private MeFile AssembleCurrentMeFile()

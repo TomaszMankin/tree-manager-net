@@ -8,7 +8,9 @@ using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
 using TreeManager.Core.Abstractions.Shell;
+using TreeManager.Core.Abstractions.Validation;
 using TreeManager.Core.Services;
+using TreeManager.Core.Services.Validation;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
@@ -67,6 +69,10 @@ public partial class App : Application
         services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
         services.AddSingleton<ILineageFolderGenerator, LineageFolderGenerator>();
         services.AddSingleton<FolderTreeCommandDependencies>();
+        services.AddSingleton<ITreeConsistencyValidator, TreeConsistencyValidator>();
+        services.AddSingleton<IValidationMessageFormatter, ValidationMessageFormatter>();
+        services.AddSingleton<IValidationReportService, ValidationReportService>();
+        services.AddSingleton<ValidationCommandDependencies>();
         services.AddSingleton<StartupBootstrapper>();
 
         services.AddTransient<OptionalDatePickerViewModel>();
