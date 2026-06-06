@@ -1,8 +1,14 @@
-﻿using System.Windows;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using TreeManager.App.Services;
 using TreeManager.App.Startup;
 using TreeManager.App.ViewModels;
+using TreeManager.App.Views;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
@@ -12,10 +18,10 @@ using TreeManager.Core.Abstractions.Validation;
 using TreeManager.Core.Services;
 using TreeManager.Core.Services.Validation;
 using TreeManager.Infrastructure.IO;
+using TreeManager.Infrastructure.Logging;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
 using TreeManager.Infrastructure.Shell;
-using Serilog;
 
 namespace TreeManager.App;
 
@@ -27,6 +33,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
         _services = BuildServiceProvider();
 
         var bootstrapper = _services.GetRequiredService<StartupBootstrapper>();
@@ -37,20 +47,90 @@ public partial class App : Application
             return;
         }
 
+        _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+
         _services.GetRequiredService<MainWindow>().Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.CloseAndFlush();
         _services?.Dispose();
         base.OnExit(e);
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        ReportCrash(e.Exception, "DispatcherUnhandledException");
+    }
+
+    private void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+    {
+        e.SetObserved();
+        ReportCrash(e.Exception, "UnobservedTaskException");
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        var ex = e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString() ?? "Unknown error");
+
+        if (_services != null)
+        {
+            ReportCrash(ex, "AppDomainUnhandledException");
+            return;
+        }
+
+        var fallbackPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TreeManager",
+            "crash-fallback.log");
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(fallbackPath));
+            File.AppendAllText(fallbackPath, $"{DateTime.Now:u} [CRASH] {ex}{Environment.NewLine}");
+        }
+        catch
+        {
+            // best-effort; do not recurse
+        }
+
+        if (Application.Current?.Dispatcher.CheckAccess() == true)
+        {
+            ShowFallbackDialog();
+        }
+    }
+
+    private void ReportCrash(Exception ex, string source)
+    {
+        if (_services == null)
+        {
+            ShowFallbackDialog();
+            return;
+        }
+
+        _services.GetRequiredService<CrashReporter>().Report(ex, source);
+    }
+
+    private static void ShowFallbackDialog()
+    {
+        try
+        {
+            var dialog = new ErrorDialog();
+            dialog.ShowDialog();
+        }
+        catch
+        {
+            // best-effort; do not recurse
+        }
     }
 
     private static ServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();
 
-        services.AddSingleton<Serilog.ILogger>(Log.Logger);
+        services.AddSingleton<ILogger>(sp => Log.Logger);
         services.AddSingleton<IFileSystemFacade, FileSystemFacade>();
         services.AddSingleton<IRootPointerStore, RootPointerStore>();
         services.AddSingleton<IMeFileProcessor, MeFileProcessor>();
@@ -74,6 +154,9 @@ public partial class App : Application
         services.AddSingleton<IValidationReportService, ValidationReportService>();
         services.AddSingleton<ValidationCommandDependencies>();
         services.AddSingleton<StartupBootstrapper>();
+        services.AddSingleton<LoggingBootstrapper>();
+        services.AddSingleton<ICrashDialogService, CrashDialogService>();
+        services.AddSingleton<CrashReporter>();
 
         services.AddTransient<OptionalDatePickerViewModel>();
         services.AddTransient<DatesTabViewModel>();
