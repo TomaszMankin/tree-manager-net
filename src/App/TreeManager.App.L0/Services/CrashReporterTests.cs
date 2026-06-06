@@ -15,9 +15,6 @@ public sealed class CrashReporterTests
     private readonly Mock<IEmailEscalator> _escalatorMock = new();
     private readonly Mock<IOfflineQueue> _queueMock = new();
 
-    private CrashReporter BuildSut() =>
-        new(_logMock.Object, _dialogMock.Object, _escalatorMock.Object, _queueMock.Object);
-
     [Fact]
     public void Report_LogsErrorAndShowsDialogOnce_WhenExceptionGiven()
     {
@@ -105,4 +102,7 @@ public sealed class CrashReporterTests
         var recorded = await Record.ExceptionAsync(() => sut.EscalateAsync(ex, "TestSource"));
         Assert.Null(recorded);
     }
+
+    private CrashReporter BuildSut() =>
+        new(_logMock.Object, _dialogMock.Object, _escalatorMock.Object, _queueMock.Object);
 }

@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TreeManager.App\TreeManager.App.csproj" />
     <ProjectReference Include="..\..\Common\TreeManager.Common.TestUtilities\TreeManager.Common.TestUtilities.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\TreeManager.Infrastructure\TreeManager.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -15,17 +15,6 @@ public sealed class QueueRetryServiceTests
     private readonly Mock<IOfflineQueue> _queueMock = new();
     private readonly Mock<ILogger> _logMock = new();
 
-    private QueueRetryService BuildSut() =>
-        new(_escalatorMock.Object, _queueMock.Object, _logMock.Object);
-
-    private static QueuedMessage MakeMessage(string id = null) => new()
-    {
-        Id = id ?? Guid.NewGuid().ToString(),
-        SubjectText = "TreeManager crash: Test",
-        BodyText = "Exception details",
-        CreatedUtc = DateTime.UtcNow
-    };
-
     [Fact]
     public async Task Drain_RemovesEntry_WhenSendSucceeds()
     {
@@ -92,4 +81,15 @@ public sealed class QueueRetryServiceTests
         _queueMock.Verify(q => q.Remove("fail-id"), Times.Never);
         _queueMock.Verify(q => q.Remove("ok-id"), Times.Once);
     }
+
+    private QueueRetryService BuildSut() =>
+        new(_escalatorMock.Object, _queueMock.Object, _logMock.Object);
+
+    private static QueuedMessage MakeMessage(string id = null) => new()
+    {
+        Id = id ?? Guid.NewGuid().ToString(),
+        SubjectText = "TreeManager crash: Test",
+        BodyText = "Exception details",
+        CreatedUtc = DateTime.UtcNow
+    };
 }
