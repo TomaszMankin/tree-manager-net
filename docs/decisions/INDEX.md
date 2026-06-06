@@ -19,3 +19,4 @@
 | 015 | Lineage folder naming: surname-clash full-name escalation | Accepted | 2026-06-04 |
 | 016 | Tree integrity: fail-fast on detected corruption | Accepted | 2026-06-04 |
 | 017 | Validation data/display split | Accepted | 2026-06-06 |
+| 018 | Global exception handling and per-day file logging | Accepted | 2026-06-06 |
