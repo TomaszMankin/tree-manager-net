@@ -90,6 +90,10 @@ $RECYCLE.BIN/
 # Windows local runner
 .local-runner
 
+# Velopack packaging output
+velopack-out/
+publish/
+
 # Claude agentic artifacts
 .pipeline
 .claude/

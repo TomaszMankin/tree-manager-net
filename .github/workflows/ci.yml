@@ -52,3 +52,16 @@ jobs:
         with:
           name: test-results
           path: test-results/
+
+      - name: Publish (packaging validation)
+        shell: pwsh
+        run: |
+          dotnet publish src/App/TreeManager.App/TreeManager.App.csproj `
+            -c Release -o publish -r win-x64 --self-contained true
+
+      - name: Velopack dry-run pack
+        shell: pwsh
+        run: |
+          dotnet tool install -g vpk --version 1.2.0
+          $version = ([xml](Get-Content src/App/TreeManager.App/TreeManager.App.csproj)).Project.PropertyGroup.Version
+          vpk pack -u TreeManager -v $version -p publish --mainExe TreeManager.App.exe -o velopack-out

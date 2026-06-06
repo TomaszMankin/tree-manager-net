@@ -21,3 +21,4 @@
 | 017 | Validation data/display split | Accepted | 2026-06-06 |
 | 018 | Global exception handling and per-day file logging | Accepted | 2026-06-06 |
 | 019 | Gmail app-password escalation on crash | Accepted | 2026-06-06 |
+| 020 | Velopack self-update from GitHub Releases | Accepted | 2026-06-06 |

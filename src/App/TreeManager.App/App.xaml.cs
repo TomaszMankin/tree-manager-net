@@ -53,6 +53,7 @@ public partial class App : Application
         _services.GetRequiredService<IQueueRetryService>().Start();
 
         _services.GetRequiredService<MainWindow>().Show();
+        _ = _services.GetRequiredService<UpdateCoordinator>().RunAsync();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -178,6 +179,9 @@ public partial class App : Application
 
         services.AddSingleton<IQueueRetryService, QueueRetryService>();
         services.AddSingleton<CrashReporter>();
+        services.AddSingleton<IUpdateService, VelopackUpdateService>();
+        services.AddSingleton<IUpdatePromptService, UpdatePromptService>();
+        services.AddSingleton<UpdateCoordinator>();
 
         services.AddTransient<OptionalDatePickerViewModel>();
         services.AddTransient<DatesTabViewModel>();
