@@ -67,6 +67,28 @@ Workflow: `.github/workflows/ci.yml` — restore → build (Release) → L0 → 
 Composite action: `.github/actions/run-test-tier` — parameterised by `tier` input. Add new tiers by invoking with a new `tier:` value — no action changes needed.
 L2/e2e steps present in workflow but gated `if: false` — flip to `if: success()` when suites exist (sprint-20).
 
+## Email escalation config (appsettings.user.json)
+
+Install-scoped credentials file at `<AppContext.BaseDirectory>/appsettings.user.json`. Matched by `*.user.json` in `.gitignore` — never commit. Shape:
+
+```json
+{
+  "email": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "useSsl": true,
+    "fromAddress": "maintainer@gmail.com",
+    "appPassword": "xxxx xxxx xxxx xxxx",
+    "toAddress": "maintainer@gmail.com"
+  }
+}
+```
+
+- `appPassword`: a Google App Password (16 chars), not the account password. Requires 2FA enabled on the Google account.
+- Port 587 + `useSsl: true` uses StartTls (Gmail default). Port 465 + `useSsl: true` uses implicit TLS.
+- File missing or malformed: escalation silently skips (no-op). No crash on bad config.
+- Offline queue for failed sends: `<treeRoot>/.TreeManager/offline_queue/<guid>.json`. Drained every 30 minutes.
+
 ## Known build quirks
 
 `TreatWarningsAsErrors=true` set globally in `Directory.Build.props`. WPF-generated `.g.cs` files may surface nullable warnings; if encountered suppress specific warning IDs in `TreeManager.App.csproj` via `<NoWarn>` — do NOT relax the global setting.

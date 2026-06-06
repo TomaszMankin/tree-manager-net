@@ -4,6 +4,7 @@ using Moq;
 using Serilog;
 using Serilog.Events;
 using TreeManager.App.Services;
+using TreeManager.Core.Abstractions.Notifications;
 using TreeManager.Infrastructure.Logging;
 
 namespace TreeManager.App.L1.Services;
@@ -42,7 +43,9 @@ public sealed class CrashReporterIntegrationTests : IDisposable
         bootstrapper.Configure(_tempRoot, date, LogEventLevel.Information);
 
         var dialogMock = new Mock<ICrashDialogService>();
-        var sut = new CrashReporter(Log.Logger, dialogMock.Object);
+        var escalatorMock = new Mock<IEmailEscalator>();
+        var queueMock = new Mock<IOfflineQueue>();
+        var sut = new CrashReporter(Log.Logger, dialogMock.Object, escalatorMock.Object, queueMock.Object);
         var exception = new InvalidOperationException("crash-test-error");
 
         //Act
@@ -67,8 +70,10 @@ public sealed class CrashReporterIntegrationTests : IDisposable
 
         var dialogMock = new Mock<ICrashDialogService>();
         dialogMock.Setup(d => d.ShowCrash()).Throws<Exception>();
+        var escalatorMock = new Mock<IEmailEscalator>();
+        var queueMock = new Mock<IOfflineQueue>();
 
-        var sut = new CrashReporter(Log.Logger, dialogMock.Object);
+        var sut = new CrashReporter(Log.Logger, dialogMock.Object, escalatorMock.Object, queueMock.Object);
         var exception = new InvalidOperationException("crash-dialog-throws");
 
         //Act

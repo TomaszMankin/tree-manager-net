@@ -10,6 +10,7 @@ using TreeManager.App.Startup;
 using TreeManager.App.ViewModels;
 using TreeManager.App.Views;
 using TreeManager.Core.Abstractions.IO;
+using TreeManager.Core.Abstractions.Notifications;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
@@ -19,6 +20,7 @@ using TreeManager.Core.Services;
 using TreeManager.Core.Services.Validation;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Logging;
+using TreeManager.Infrastructure.Notifications;
 using TreeManager.Infrastructure.Persistence;
 using TreeManager.Infrastructure.Settings;
 using TreeManager.Infrastructure.Shell;
@@ -48,12 +50,14 @@ public partial class App : Application
         }
 
         _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+        _services.GetRequiredService<IQueueRetryService>().Start();
 
         _services.GetRequiredService<MainWindow>().Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _services?.GetService<IQueueRetryService>()?.Stop();
         Log.CloseAndFlush();
         _services?.Dispose();
         base.OnExit(e);
@@ -88,8 +92,9 @@ public partial class App : Application
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(fallbackPath));
-            File.AppendAllText(fallbackPath, $"{DateTime.Now:u} [CRASH] {ex}{Environment.NewLine}");
+            var fs = new FileSystemFacade();
+            fs.CreateDirectory(Path.GetDirectoryName(fallbackPath));
+            fs.AppendAllText(fallbackPath, $"{DateTime.Now:u} [CRASH] {ex}{Environment.NewLine}");
         }
         catch
         {
@@ -156,6 +161,22 @@ public partial class App : Application
         services.AddSingleton<StartupBootstrapper>();
         services.AddSingleton<LoggingBootstrapper>();
         services.AddSingleton<ICrashDialogService, CrashDialogService>();
+
+        services.AddSingleton<IEmailSettingsStore>(sp =>
+            new EmailSettingsStore(
+                Path.Combine(AppContext.BaseDirectory, "appsettings.user.json"),
+                sp.GetRequiredService<IFileSystemFacade>(),
+                sp.GetRequiredService<ILogger>()));
+
+        services.AddSingleton<IEmailEscalator, GmailEscalator>();
+
+        services.AddSingleton<IOfflineQueue>(sp =>
+            new FileOfflineQueue(
+                sp.GetRequiredService<IRootPointerStore>().Read(),
+                sp.GetRequiredService<IFileSystemFacade>(),
+                sp.GetRequiredService<ILogger>()));
+
+        services.AddSingleton<IQueueRetryService, QueueRetryService>();
         services.AddSingleton<CrashReporter>();
 
         services.AddTransient<OptionalDatePickerViewModel>();

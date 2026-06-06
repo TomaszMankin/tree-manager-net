@@ -20,3 +20,4 @@
 | 016 | Tree integrity: fail-fast on detected corruption | Accepted | 2026-06-04 |
 | 017 | Validation data/display split | Accepted | 2026-06-06 |
 | 018 | Global exception handling and per-day file logging | Accepted | 2026-06-06 |
+| 019 | Gmail app-password escalation on crash | Accepted | 2026-06-06 |
