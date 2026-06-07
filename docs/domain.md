@@ -52,7 +52,3 @@ Per-person record file stored as `me.json` in each person's folder. Dates serial
 
 Every relationship is stored on BOTH people's `me.json`. UUID is authoritative; the cached display name is a convenience copy refreshed on rename. Sync is idempotent — re-running de-dupes. Example: adding Anna as Jan's mother also writes Jan into Anna's children list immediately, with no manual step.
 
-## Forbidden folder names (py-tree-manager heritage)
-
-py-tree-manager skipped a named set during scanning (`'Pozostałe nieuporządkowane'`, `'Rutowscy - dane ogólne'`, `'Do ustalenia'`, `'Wspólne'`). tree-manager-net does NOT maintain such a list: the scan descends only `'Lista osób'`, and drafts are isolated by their sibling location, not by an exclusion set.
-
