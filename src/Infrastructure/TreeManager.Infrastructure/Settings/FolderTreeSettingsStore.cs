@@ -9,12 +9,12 @@ using TreeManager.Core.Abstractions.Settings;
 namespace TreeManager.Infrastructure.Settings;
 
 /// <summary>
-/// Persists Drzewo-specific settings per tree root at &lt;rootPath&gt;/.PyTreeManager/settings.json.
+/// Persists Drzewo-specific settings per tree root at &lt;rootPath&gt;/.TreeManagerNet/settings.json.
 /// Uses JSON read-modify-write via JsonNode to preserve unknown keys (forward-compat for future settings).
 /// </summary>
 public sealed class FolderTreeSettingsStore : IFolderTreeSettingsStore
 {
-    private const string RuntimeFolderName = ".PyTreeManager";
+    private const string RuntimeFolderName = ".TreeManagerNet";
     private const string SettingsFileName = "settings.json";
     private const string RootPersonIdKey = "drzewoRootPersonId";
 

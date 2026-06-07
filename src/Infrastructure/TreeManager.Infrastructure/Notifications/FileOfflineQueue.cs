@@ -11,7 +11,7 @@ namespace TreeManager.Infrastructure.Notifications;
 
 public sealed class FileOfflineQueue : IOfflineQueue
 {
-    private const string RuntimeFolderName = ".TreeManager";
+    private const string RuntimeFolderName = ".TreeManagerNet";
     private const string QueueFolderName = "offline_queue";
 
     private readonly string _rootPath;

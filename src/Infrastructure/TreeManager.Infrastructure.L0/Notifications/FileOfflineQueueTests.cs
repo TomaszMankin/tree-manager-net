@@ -13,7 +13,7 @@ namespace TreeManager.Infrastructure.L0.Notifications;
 public sealed class FileOfflineQueueTests
 {
     private const string FakeRoot = @"C:\fake\root";
-    private const string QueueDir = @"C:\fake\root\.TreeManager\offline_queue";
+    private const string QueueDir = @"C:\fake\root\.TreeManagerNet\offline_queue";
 
     private readonly Mock<IFileSystemFacade> _fsMock = new();
     private readonly Mock<ILogger> _logMock = new();

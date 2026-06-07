@@ -4,7 +4,7 @@ namespace TreeManager.Core.Abstractions.Settings;
 
 /// <summary>
 /// Persists Drzewo-specific settings per tree root.
-/// Reads/writes <c>&lt;rootPath&gt;/.PyTreeManager/settings.json</c>.
+/// Reads/writes <c>&lt;rootPath&gt;/.TreeManagerNet/settings.json</c>.
 /// </summary>
 public interface IFolderTreeSettingsStore
 {

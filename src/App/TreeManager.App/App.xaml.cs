@@ -39,6 +39,12 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+        var earlyRoot = TryReadEarlyRootPath();
+        if (!string.IsNullOrEmpty(earlyRoot))
+        {
+            new LoggingBootstrapper().Configure(earlyRoot);
+        }
+
         _services = BuildServiceProvider();
 
         var bootstrapper = _services.GetRequiredService<StartupBootstrapper>();
@@ -49,7 +55,11 @@ public partial class App : Application
             return;
         }
 
-        _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+        if (!string.Equals(result.RootPath, earlyRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+        }
+
         _services.GetRequiredService<IQueueRetryService>().Start();
 
         _services.GetRequiredService<MainWindow>().Show();
@@ -88,7 +98,7 @@ public partial class App : Application
 
         var fallbackPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TreeManager",
+            "TreeManagerNet",
             "crash-fallback.log");
 
         try
@@ -117,6 +127,24 @@ public partial class App : Application
         }
 
         _services.GetRequiredService<ICrashReporter>().Report(ex, source);
+    }
+
+    private static string TryReadEarlyRootPath()
+    {
+        try
+        {
+            var pointerPath = RootPointerStore.ResolveDefaultPointerPath();
+            if (!File.Exists(pointerPath))
+            {
+                return string.Empty;
+            }
+            var path = File.ReadAllText(pointerPath).Trim();
+            return Directory.Exists(path) ? path : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static void ShowFallbackDialog()

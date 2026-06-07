@@ -109,4 +109,53 @@ public class StartupBootstrapperTests
     }
 
     #endregion
+
+    #region InitialiseRootFolders
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Resolve_CreatesListaOsobFolder_WhenUserPicksNewRoot()
+    {
+        //Arrange
+        _store.Setup(x => x.Read()).Returns(string.Empty);
+        _picker.Setup(x => x.PickRoot()).Returns(PickedRoot);
+
+        //Act
+        _sut.Resolve();
+
+        //Assert
+        _fs.Verify(x => x.CreateDirectory(System.IO.Path.Combine(PickedRoot, "Lista osób")), Times.Once);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Resolve_CreatesPoczekalniaFolder_WhenUserPicksNewRoot()
+    {
+        //Arrange
+        _store.Setup(x => x.Read()).Returns(string.Empty);
+        _picker.Setup(x => x.PickRoot()).Returns(PickedRoot);
+
+        //Act
+        _sut.Resolve();
+
+        //Assert
+        _fs.Verify(x => x.CreateDirectory(System.IO.Path.Combine(PickedRoot, "Poczekalnia")), Times.Once);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Resolve_DoesNotCreateFolders_WhenExistingRootIsUsed()
+    {
+        //Arrange
+        _store.Setup(x => x.Read()).Returns(ValidRoot);
+        _fs.Setup(x => x.DirectoryExists(ValidRoot)).Returns(true);
+
+        //Act
+        _sut.Resolve();
+
+        //Assert
+        _fs.Verify(x => x.CreateDirectory(It.IsAny<string>()), Times.Never);
+    }
+
+    #endregion
 }

@@ -11,7 +11,7 @@ namespace TreeManager.Infrastructure.L0.Settings;
 public class FolderTreeSettingsStoreTests
 {
     private const string FakeRoot = @"C:\fake\root";
-    private const string SettingsPath = @"C:\fake\root\.PyTreeManager\settings.json";
+    private const string SettingsPath = @"C:\fake\root\.TreeManagerNet\settings.json";
 
     private readonly Mock<IFileSystemFacade> _mockFs;
     private readonly Mock<ILogger> _mockLog;
@@ -74,7 +74,7 @@ public class FolderTreeSettingsStoreTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void SetRootPersonId_WritesJsonUnderPyTreeManager_WhenCalled()
+    public void SetRootPersonId_WritesJsonUnderTreeManagerNet_WhenCalled()
     {
         //Arrange
         var id = Guid.NewGuid();
@@ -87,7 +87,7 @@ public class FolderTreeSettingsStoreTests
         _sut.SetRootPersonId(FakeRoot, id);
 
         //Assert
-        _mockFs.Verify(f => f.CreateDirectory(Path.Combine(FakeRoot, ".PyTreeManager")), Times.Once());
+        _mockFs.Verify(f => f.CreateDirectory(Path.Combine(FakeRoot, ".TreeManagerNet")), Times.Once());
         _mockFs.Verify(f => f.WriteAllText(SettingsPath, It.IsAny<string>()), Times.Once());
         Assert.NotNull(capturedContent);
         Assert.Contains(id.ToString(), capturedContent);
