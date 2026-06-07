@@ -1,3 +1,4 @@
+using System;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Domain;
 
@@ -76,4 +77,71 @@ public class PartialDateTests
         //Assert
         Assert.Equal(expected, result);
     }
+
+    #region ToPartialDate edge cases
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_Throws_WhenInputIsNull()
+    {
+        string input = null;
+        Assert.Throws<ArgumentNullException>(() => input.ToPartialDate());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_ReturnsDefault_WhenChunkCountIsNotThree()
+    {
+        //Arrange
+        const string Input = "12|03";
+
+        //Act
+        var result = Input.ToPartialDate();
+
+        //Assert
+        Assert.Equal(default(PartialDate), result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_ReturnsNullYear_WhenAllYearCharsAreWildcard()
+    {
+        //Arrange
+        const string Input = "12|03|----";
+
+        //Act
+        var result = Input.ToPartialDate();
+
+        //Assert
+        Assert.Null(result.Year);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("--|03|1947")]
+    [InlineData("12|--|1947")]
+    public void ToPartialDate_ReturnsNullDayOrMonth_WhenSegmentIsNonNumeric(string input)
+    {
+        //Arrange + Act
+        var result = input.ToPartialDate();
+
+        //Assert
+        Assert.True(result.Day == null || result.Month == null);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_PreservesPartialYearString_WhenYearIsPartiallyKnown()
+    {
+        //Arrange
+        const string Input = "12|03|184-";
+
+        //Act
+        var result = Input.ToPartialDate();
+
+        //Assert
+        Assert.Equal("184-", result.Year);
+    }
+
+    #endregion
 }
