@@ -68,6 +68,11 @@ public class MainViewModelTests
         // Default: not dirty — existing tests proceed unchanged
         _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
 
+        // Default: root person is set
+        _mockFolderTreeSettings
+            .Setup(s => s.GetRootPersonId(It.IsAny<string>()))
+            .Returns(Guid.NewGuid());
+
         // Default: FolderTreeGenerator.Generate returns success
         _mockFolderTreeGenerator
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
@@ -981,97 +986,36 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_CallsPickerWithDirectoryPeople_WhenInvoked()
+    public void GenerateFolderTree_SetsError_WhenNoRootPersonSet()
     {
         //Arrange
-        var people = new List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Adam Kowalski") };
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(people);
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(people[0]);
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
 
         //Act
         _sut.GenerateFolderTreeCommand.Execute(null);
 
         //Assert
-        _mockDirectoryService.Verify(s => s.GetAll(FakeRoot), Times.Once());
-        _mockPickerService.Verify(s => s.PickPerson(people), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_DoesNothing_WhenPickerReturnsNull()
-    {
-        //Arrange
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns((PersonSummary)null);
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("osoby głównej", _sut.ErrorMessage);
         _mockFolderTreeGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_PersistsSelectedRootPerson_WhenPersonChosen()
+    public void GenerateFolderTree_RunsGeneration_WhenRootPersonSet()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockFolderTreeGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((5, new List<string>()));
 
         //Act
         _sut.GenerateFolderTreeCommand.Execute(null);
 
         //Assert
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_CallsGenerateWithRootPathAndChosenGuid_WhenPersonChosen()
-    {
-        //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Eva Nowakowska");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
-        _mockFolderTreeGenerator.Verify(g => g.Generate(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_SetsSuccessMessage_WhenGenerateSucceeds()
-    {
-        //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-        _mockFolderTreeGenerator
-            .Setup(g => g.Generate(FakeRoot, chosen.UniqueIdentifier))
-            .Returns((7, new List<string>()));
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
-        Assert.Contains("7", _sut.StatusMessage);
+        _mockFolderTreeGenerator.Verify(g => g.Generate(FakeRoot, rootId), Times.Once());
         Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("5", _sut.StatusMessage);
     }
 
     [Fact]
@@ -1079,11 +1023,6 @@ public class MainViewModelTests
     public void GenerateFolderTree_SetsErrorMessage_WhenGenerateThrows()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
         _mockFolderTreeGenerator
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
             .Throws<InvalidOperationException>();
@@ -1474,44 +1413,36 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateLineageFolders_GeneratesAndReportsCount_WhenPersonPicked()
+    public void GenerateLineageFolders_SetsError_WhenNoRootPersonSet()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-        _mockLineageFolderGenerator
-            .Setup(g => g.Generate(FakeRoot, chosen.UniqueIdentifier))
-            .Returns((9, new List<string>()));
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
 
         //Act
         _sut.GenerateLineageFoldersCommand.Execute(null);
 
         //Assert
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-        _mockLineageFolderGenerator.Verify(g => g.Generate(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-        Assert.Contains("9", _sut.StatusMessage);
-        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("osoby głównej", _sut.ErrorMessage);
+        _mockLineageFolderGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateLineageFolders_DoesNothing_WhenPickerCancels()
+    public void GenerateLineageFolders_RunsGeneration_WhenRootPersonSet()
     {
         //Arrange
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns((PersonSummary)null);
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockLineageFolderGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((9, new List<string>()));
 
         //Act
         _sut.GenerateLineageFoldersCommand.Execute(null);
 
         //Assert
-        _mockLineageFolderGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+        _mockLineageFolderGenerator.Verify(g => g.Generate(FakeRoot, rootId), Times.Once());
+        Assert.Contains("9", _sut.StatusMessage);
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
     }
 
     [Fact]
@@ -1519,11 +1450,6 @@ public class MainViewModelTests
     public void GenerateLineageFolders_SetsError_WhenGeneratorThrows()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
         _mockLineageFolderGenerator
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
             .Throws<InvalidOperationException>();

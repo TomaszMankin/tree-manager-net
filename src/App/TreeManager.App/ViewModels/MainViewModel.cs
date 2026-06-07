@@ -17,8 +17,10 @@ public sealed partial class MainViewModel : ObservableObject
     private const string PeopleListFolderName = "Lista osób";
     private const string GenerateFolderTreeSuccessTemplate = "Wygenerowano drzewo: {0} skrótów.";
     private const string GenerateFolderTreeErrorMessage = "Nie udało się wygenerować drzewa. Spróbuj ponownie.";
+    private const string GenerateFolderTreeNoRootMessage = "Nie wybrano osoby głównej. Wybierz osobę główną przed generowaniem drzewa.";
     private const string GenerateLineageSuccessTemplate = "Wygenerowano rody: {0} skrótów.";
     private const string GenerateLineageErrorMessage = "Nie udało się wygenerować rodów. Spróbuj ponownie.";
+    private const string GenerateLineageNoRootMessage = "Nie wybrano osoby głównej. Wybierz osobę główną przed generowaniem rodów.";
     private const string GenerateLineageIntegrityErrorMessage = "Błąd integralności drzewa. Dane zostały zmienione poza aplikacją.";
     private const string ValidateTreeErrorMessage = "Nie udało się sprawdzić spójności drzewa. Spróbuj ponownie.";
     private const string SavePersonSuccessMessage = "Zapisano osobę.";
@@ -357,18 +359,17 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var people = _editDeps.DirectoryService.GetAll(rootPath);
-        var selected = _editDeps.PickerService.PickPerson(people);
-        if (selected == null)
+        var rootPersonId = _folderTreeDeps.SettingsStore.GetRootPersonId(rootPath);
+        if (rootPersonId == Guid.Empty)
         {
+            ErrorMessage = GenerateFolderTreeNoRootMessage;
             return;
         }
 
         IsBusy = true;
         try
         {
-            _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
-            var result = _folderTreeDeps.Generator.Generate(rootPath, selected.UniqueIdentifier);
+            var result = _folderTreeDeps.Generator.Generate(rootPath, rootPersonId);
             ErrorMessage = string.Empty;
             StatusMessage = string.Format(GenerateFolderTreeSuccessTemplate, result.Written);
         }
@@ -394,18 +395,17 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var people = _editDeps.DirectoryService.GetAll(rootPath);
-        var selected = _editDeps.PickerService.PickPerson(people);
-        if (selected == null)
+        var rootPersonId = _folderTreeDeps.SettingsStore.GetRootPersonId(rootPath);
+        if (rootPersonId == Guid.Empty)
         {
+            ErrorMessage = GenerateLineageNoRootMessage;
             return;
         }
 
         IsBusy = true;
         try
         {
-            _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
-            var result = _folderTreeDeps.LineageGenerator.Generate(rootPath, selected.UniqueIdentifier);
+            var result = _folderTreeDeps.LineageGenerator.Generate(rootPath, rootPersonId);
             ErrorMessage = string.Empty;
             StatusMessage = string.Format(GenerateLineageSuccessTemplate, result.Written);
         }
