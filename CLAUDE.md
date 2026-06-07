@@ -89,6 +89,10 @@ Install-scoped credentials file at `<AppContext.BaseDirectory>/appsettings.user.
 - File missing or malformed: escalation silently skips (no-op). No crash on bad config.
 - Offline queue for failed sends: `<treeRoot>/.TreeManager/offline_queue/<guid>.json`. Drained every 30 minutes.
 
+## Code-signing
+
+Out of scope. No Authenticode signature is applied to shipped binaries or the setup executable.
+
 ## Known build quirks
 
 `TreatWarningsAsErrors=true` set globally in `Directory.Build.props`. WPF-generated `.g.cs` files may surface nullable warnings; if encountered suppress specific warning IDs in `TreeManager.App.csproj` via `<NoWarn>` — do NOT relax the global setting.

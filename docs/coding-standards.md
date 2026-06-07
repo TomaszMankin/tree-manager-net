@@ -15,6 +15,11 @@ Examples:
 
 After writing a test, re-read the name. If it could apply to a different test body, rename it.
 
+When there is no meaningful condition (the behavior is unconditional), the third segment must be `Always`, `Never`, or `Throws` — never generic placeholders like `WhenCalled` or `WhenInvoked`.
+
+- `Write_WritesPathToPointerFile_Always` — not `_WhenCalled`
+- `ResolveDefaultPointerPath_ReturnsPathUnderPyTreeManager_Always` — not a 2-segment name
+
 ---
 
 ## AAA comments
