@@ -20,12 +20,16 @@ public sealed partial class DatesTabViewModel : ObservableObject
         BirthDate.Day = temp.BirthDate.Day;
         BirthDate.Month = temp.BirthDate.Month;
         BirthDate.Year = temp.BirthDate.Year;
+        BirthDate.IsBefore = temp.BirthDate.IsBefore;
+        BirthDate.IsApprox = temp.BirthDate.IsApprox;
 
         if (IsDeceased)
         {
             DeathDate.Day = temp.DeathDate.Day;
             DeathDate.Month = temp.DeathDate.Month;
             DeathDate.Year = temp.DeathDate.Year;
+            DeathDate.IsBefore = temp.DeathDate.IsBefore;
+            DeathDate.IsApprox = temp.DeathDate.IsApprox;
         }
     }
 
@@ -37,6 +41,8 @@ public sealed partial class DatesTabViewModel : ObservableObject
             DeathDate.Day = null;
             DeathDate.Month = null;
             DeathDate.Year = null;
+            DeathDate.IsBefore = false;
+            DeathDate.IsApprox = false;
         }
     }
 }

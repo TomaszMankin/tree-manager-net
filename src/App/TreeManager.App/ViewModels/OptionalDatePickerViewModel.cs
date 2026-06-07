@@ -8,6 +8,8 @@ public sealed partial class OptionalDatePickerViewModel : ObservableObject
     [ObservableProperty] private string _month;
     [ObservableProperty] private string _year;
     [ObservableProperty] private bool _isEnabled = true;
+    [ObservableProperty] private bool _isBefore;
+    [ObservableProperty] private bool _isApprox;
 
     partial void OnDayChanged(string value) => OnPropertyChanged(nameof(IsDayValid));
     partial void OnMonthChanged(string value) => OnPropertyChanged(nameof(IsMonthValid));

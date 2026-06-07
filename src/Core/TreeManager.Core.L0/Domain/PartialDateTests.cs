@@ -78,6 +78,120 @@ public class PartialDateTests
         Assert.Equal(expected, result);
     }
 
+    #region Qualifier prefix
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToSerializedString_PrependsApproxAndBeforePrefix_WhenBothQualifiersSet()
+    {
+        //Arrange
+        var date = new PartialDate(12, 3, "1947") { IsBefore = true, IsApprox = true };
+
+        //Act
+        var result = date.ToSerializedString();
+
+        //Assert
+        Assert.Equal("~<12|03|1947", result);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(true, false, "<12|03|1947")]
+    [InlineData(false, true, "~12|03|1947")]
+    public void ToSerializedString_PrependsExpectedPrefix_WhenSingleQualifierSet(
+        bool isBefore, bool isApprox, string expected)
+    {
+        //Arrange
+        var date = new PartialDate(12, 3, "1947") { IsBefore = isBefore, IsApprox = isApprox };
+
+        //Act
+        var result = date.ToSerializedString();
+
+        //Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToSerializedString_EmitsNoPrefix_WhenNoQualifierSet()
+    {
+        //Arrange
+        var date = new PartialDate(12, 3, "1947");
+
+        //Act
+        var result = date.ToSerializedString();
+
+        //Assert
+        Assert.Equal("12|03|1947", result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_SetsBothQualifiers_WhenPrefixIsApproxBefore()
+    {
+        //Arrange
+        const string Input = "~<--|--|1900";
+
+        //Act
+        var result = Input.ToPartialDate();
+
+        //Assert
+        Assert.True(result.IsApprox);
+        Assert.True(result.IsBefore);
+        Assert.Null(result.Day);
+        Assert.Null(result.Month);
+        Assert.Equal("1900", result.Year);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("<12|03|1947", true, false)]
+    [InlineData("~--|04|1950", false, true)]
+    public void ToPartialDate_SetsExpectedQualifier_WhenSinglePrefixPresent(
+        string input, bool expectedIsBefore, bool expectedIsApprox)
+    {
+        //Arrange
+        //Act
+        var result = input.ToPartialDate();
+
+        //Assert
+        Assert.Equal(expectedIsBefore, result.IsBefore);
+        Assert.Equal(expectedIsApprox, result.IsApprox);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToPartialDate_LeavesBothQualifiersFalse_WhenNoPrefix()
+    {
+        //Arrange
+        const string Input = "12|03|1947";
+
+        //Act
+        var result = Input.ToPartialDate();
+
+        //Assert
+        Assert.False(result.IsBefore);
+        Assert.False(result.IsApprox);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("~<--|--|1900")]
+    [InlineData("<12|03|1947")]
+    [InlineData("~--|04|1950")]
+    [InlineData("12|03|1947")]
+    public void ToPartialDate_RoundTripsQualifiers_WhenReserialized(string input)
+    {
+        //Arrange
+        //Act
+        var result = input.ToPartialDate().ToSerializedString();
+
+        //Assert
+        Assert.Equal(input, result);
+    }
+
+    #endregion
+
     #region ToPartialDate edge cases
 
     [Fact]

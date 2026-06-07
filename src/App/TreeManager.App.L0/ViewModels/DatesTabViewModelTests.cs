@@ -86,6 +86,24 @@ public class DatesTabViewModelTests
         Assert.False(vm.IsDeceased);
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DeathQualifiers_ClearedToFalse_WhenIsDeceasedToggledOff()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.IsDeceased = true;
+        vm.DeathDate.IsBefore = true;
+        vm.DeathDate.IsApprox = true;
+
+        //Act
+        vm.IsDeceased = false;
+
+        //Assert
+        Assert.False(vm.DeathDate.IsBefore);
+        Assert.False(vm.DeathDate.IsApprox);
+    }
+
     #region Reset
 
     [Fact]
