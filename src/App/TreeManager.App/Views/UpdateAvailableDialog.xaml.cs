@@ -10,12 +10,12 @@ public partial class UpdateAvailableDialog : Window
         VersionText.Text = "Nowa wersja: " + targetVersion;
     }
 
-    private void TakButton_Click(object sender, RoutedEventArgs e)
+    private void YesButton_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = true;
     }
 
-    private void NieButton_Click(object sender, RoutedEventArgs e)
+    private void NoButton_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
     }

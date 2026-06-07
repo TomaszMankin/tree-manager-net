@@ -10,12 +10,12 @@
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button x:Name="TakButton" Content="Tak" Width="90" Margin="0,0,8,0"
+            <Button x:Name="YesButton" Content="Tak" Width="90" Margin="0,0,8,0"
                     IsDefault="True"
-                    Click="TakButton_Click"/>
-            <Button x:Name="NieButton" Content="Nie" Width="90"
+                    Click="YesButton_Click"/>
+            <Button x:Name="NoButton" Content="Nie" Width="90"
                     IsCancel="True"
-                    Click="NieButton_Click"/>
+                    Click="NoButton_Click"/>
         </StackPanel>
 
         <StackPanel VerticalAlignment="Center">

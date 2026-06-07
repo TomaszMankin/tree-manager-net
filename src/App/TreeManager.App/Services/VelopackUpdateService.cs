@@ -9,11 +9,13 @@ namespace TreeManager.App.Services;
 public sealed class VelopackUpdateService : IUpdateService
 {
     private readonly ILogger _log;
+    private readonly UpdateManager _mgr;
     private UpdateInfo _pendingUpdate;
 
     public VelopackUpdateService(ILogger log)
     {
         _log = log;
+        _mgr = new UpdateManager(new GithubSource("https://github.com/TomaszMankin/tree-manager-net", null, false));
     }
 
     public async Task<UpdateCheckResult> CheckAsync()
@@ -35,9 +37,8 @@ public sealed class VelopackUpdateService : IUpdateService
 
         try
         {
-            var mgr = BuildManager();
-            await mgr.DownloadUpdatesAsync(_pendingUpdate);
-            mgr.ApplyUpdatesAndRestart(_pendingUpdate.TargetFullRelease);
+            await _mgr.DownloadUpdatesAsync(_pendingUpdate);
+            _mgr.ApplyUpdatesAndRestart(_pendingUpdate.TargetFullRelease);
         }
         catch (Exception ex)
         {
@@ -49,7 +50,7 @@ public sealed class VelopackUpdateService : IUpdateService
     {
         try
         {
-            return BuildManager().IsInstalled;
+            return _mgr.IsInstalled;
         }
         catch (Exception ex)
         {
@@ -62,8 +63,7 @@ public sealed class VelopackUpdateService : IUpdateService
     {
         try
         {
-            var mgr = BuildManager();
-            var info = await mgr.CheckForUpdatesAsync();
+            var info = await _mgr.CheckForUpdatesAsync();
             if (info == null)
             {
                 return UpdateCheckResult.None;
@@ -78,7 +78,4 @@ public sealed class VelopackUpdateService : IUpdateService
             return UpdateCheckResult.None;
         }
     }
-
-    private static UpdateManager BuildManager() =>
-        new(new GithubSource("https://github.com/TomaszMankin/tree-manager-net", null, false));
 }

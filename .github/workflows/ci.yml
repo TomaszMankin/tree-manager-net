@@ -57,7 +57,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet publish src/App/TreeManager.App/TreeManager.App.csproj `
-            -c Release -o publish -r win-x64 --self-contained true
+            -c Release -o publish -r win-x64 --self-contained false
 
       - name: Velopack dry-run pack
         shell: pwsh
