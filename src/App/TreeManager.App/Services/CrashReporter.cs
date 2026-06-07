@@ -6,7 +6,7 @@ using TreeManager.Core.Domain.Notifications;
 
 namespace TreeManager.App.Services;
 
-public sealed class CrashReporter
+public sealed class CrashReporter : ICrashReporter
 {
     private readonly ILogger _log;
     private readonly ICrashDialogService _dialog;

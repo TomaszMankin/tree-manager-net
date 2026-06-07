@@ -26,6 +26,10 @@ public sealed partial class MainViewModel : ObservableObject
     private const string SavePersonSuccessMessage = "Zapisano osobę.";
     private const string SaveDraftSuccessMessage = "Zapisano szkic.";
     private const string OpenDataFolderMissingMessage = "Nie wybrano folderu z danymi.";
+    private const string SetRootPersonSuccessTemplate = "Wybrano osobę główną: {0}.";
+    private const string SetRootPersonNoRootMessage = "Nie wybrano folderu z danymi.";
+    private const string ChangeRootFolderSuccessMessage = "Zmieniono folder z danymi.";
+    private const string EmptyRootMessage = "Nie wybrano folderu z danymi.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -34,6 +38,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     private readonly IPersonRepository _personRepository;
     private readonly IRootPointerStore _rootPointerStore;
+    private readonly IRootPickerService _rootPickerService;
+    private readonly ICrashReporter _crashReporter;
     private readonly PersonEditDependencies _editDeps;
     private readonly FolderTreeCommandDependencies _folderTreeDeps;
     private readonly ValidationCommandDependencies _validationDeps;
@@ -51,7 +57,9 @@ public sealed partial class MainViewModel : ObservableObject
         PersonEditDependencies editDeps,
         FolderTreeCommandDependencies folderTreeDeps,
         ValidationCommandDependencies validationDeps,
-        ILogger log)
+        ILogger log,
+        IRootPickerService rootPickerService,
+        ICrashReporter crashReporter)
     {
         Person = person;
         Dates = dates;
@@ -59,10 +67,13 @@ public sealed partial class MainViewModel : ObservableObject
         Notes = notes;
         _personRepository = personRepository;
         _rootPointerStore = rootPointerStore;
+        _rootPickerService = rootPickerService;
+        _crashReporter = crashReporter;
         _editDeps = editDeps;
         _folderTreeDeps = folderTreeDeps;
         _validationDeps = validationDeps;
         _log = log;
+        ResetToBlank();
     }
 
     [ObservableProperty]
@@ -121,6 +132,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("OpenPerson called with empty root path");
+            ErrorMessage = EmptyRootMessage;
             return;
         }
 
@@ -166,6 +178,7 @@ public sealed partial class MainViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(rootPath))
             {
                 _log.Warning("Save called with empty root path");
+                ErrorMessage = EmptyRootMessage;
                 return;
             }
 
@@ -190,6 +203,9 @@ public sealed partial class MainViewModel : ObservableObject
             if (_originalSnapshot == null)
             {
                 _personRepository.Create(meFile, rootPath);
+                _originalSnapshot = meFile;
+                CurrentMode = AppMode.EditTree;
+                WindowTitle = BuildWindowTitle(AppMode.EditTree, Person.ToFolderName());
             }
             else
             {
@@ -220,6 +236,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("SaveAsDraft called with empty root path");
+            ErrorMessage = EmptyRootMessage;
             return;
         }
 
@@ -246,6 +263,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("LoadDraft called with empty root path");
+            ErrorMessage = EmptyRootMessage;
             return;
         }
 
@@ -293,6 +311,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("PromoteDraft called with empty root path");
+            ErrorMessage = EmptyRootMessage;
             return;
         }
 
@@ -452,6 +471,50 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void SetRootPerson()
+    {
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("SetRootPerson called with empty root path");
+            ErrorMessage = SetRootPersonNoRootMessage;
+            return;
+        }
+
+        var people = _editDeps.DirectoryService.GetAll(rootPath);
+        var selected = _editDeps.PickerService.PickPerson(people);
+        if (selected == null)
+        {
+            return;
+        }
+
+        _folderTreeDeps.SettingsStore.SetRootPersonId(rootPath, selected.UniqueIdentifier);
+        ErrorMessage = string.Empty;
+        StatusMessage = string.Format(SetRootPersonSuccessTemplate, selected.DisplayName);
+    }
+
+    [RelayCommand]
+    private void ChangeRootFolder()
+    {
+        var newRoot = _rootPickerService.PickRoot();
+        if (string.IsNullOrWhiteSpace(newRoot))
+        {
+            return;
+        }
+
+        _rootPointerStore.Write(newRoot);
+        ResetToBlank();
+        ErrorMessage = string.Empty;
+        StatusMessage = ChangeRootFolderSuccessMessage;
+    }
+
+    [RelayCommand]
+    private void SendTestReport()
+    {
+        _crashReporter.Report(new InvalidOperationException("Ręczny raport z aplikacji."), "ManualReport");
+    }
+
     private void ResetToBlank()
     {
         var rootPath = _rootPointerStore.Read();
@@ -528,6 +591,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static string BuildPromoteSummary(MeFile meFile)
     {
-        return $"Imię i nazwisko: {meFile.FirstName} {meFile.LastName}\nData urodzenia: {meFile.DatesOfBirth}";
+        return $"Imię i nazwisko: {meFile.FirstName} {meFile.LastName}\n"
+             + $"Data urodzenia: {meFile.DatesOfBirth}\n"
+             + $"Rodzice: {meFile.ParentsId.Count}\n"
+             + $"Małżonkowie: {meFile.SpouseId.Count}\n"
+             + $"Dzieci: {meFile.ChildrenId.Count}";
     }
 }

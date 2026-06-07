@@ -24,3 +24,4 @@
 | 020 | Velopack self-update from GitHub Releases | Accepted | 2026-06-06 |
 | 021 | Velopack setup as the installer; no separate Inno Setup script | Accepted | 2026-06-07 |
 | 022 | Coverage thresholds enforced in CI before cutover | Accepted | 2026-06-07 |
+| 023 | Root-person selection for 'Generuj' commands | Accepted | 2026-06-07 |

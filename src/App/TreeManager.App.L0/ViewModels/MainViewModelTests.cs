@@ -38,6 +38,8 @@ public class MainViewModelTests
     private readonly Mock<IMeFileProcessor> _mockProcessor;
     private readonly Mock<IPromoteConfirmService> _mockPromoteConfirm;
     private readonly Mock<IFolderRevealService> _mockFolderReveal;
+    private readonly Mock<IRootPickerService> _mockRootPickerService;
+    private readonly Mock<ICrashReporter> _mockCrashReporter;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -61,9 +63,16 @@ public class MainViewModelTests
         _mockProcessor = new Mock<IMeFileProcessor>();
         _mockPromoteConfirm = new Mock<IPromoteConfirmService>();
         _mockFolderReveal = new Mock<IFolderRevealService>();
+        _mockRootPickerService = new Mock<IRootPickerService>();
+        _mockCrashReporter = new Mock<ICrashReporter>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
+
+        // Default: directory service returns empty list — used by ResetToBlank in ctor and OpenPerson
+        _mockDirectoryService
+            .Setup(s => s.GetAll(It.IsAny<string>()))
+            .Returns(new List<PersonSummary>());
 
         // Default: not dirty — existing tests proceed unchanged
         _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
@@ -135,7 +144,9 @@ public class MainViewModelTests
             deps,
             folderTreeDeps,
             validationDeps,
-            _mockLog.Object);
+            _mockLog.Object,
+            _mockRootPickerService.Object,
+            _mockCrashReporter.Object);
     }
 
     #region SwitchMode
@@ -1541,4 +1552,189 @@ public class MainViewModelTests
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
     }
+
+    #region SetRootPerson
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_DoesNotPersist_WhenPickerCancelled()
+    {
+        //Arrange
+        _mockPickerService.Setup(x => x.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>())).Returns((PersonSummary)null);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_PersistsAndSetsStatus_WhenPersonSelected()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var person = new PersonSummary(personId, "Jan Kowalski");
+        _mockPickerService.Setup(x => x.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>())).Returns(person);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, personId), Times.Once());
+        Assert.Contains("Jan Kowalski", _sut.StatusMessage);
+    }
+
+    #endregion
+
+    #region ChangeRootFolder
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ChangeRootFolder_DoesNotWriteRoot_WhenPickerCancelled()
+    {
+        //Arrange
+        _mockRootPickerService.Setup(x => x.PickRoot()).Returns(string.Empty);
+
+        //Act
+        _sut.ChangeRootFolderCommand.Execute(null);
+
+        //Assert
+        _mockRootPointerStore.Verify(s => s.Write(It.IsAny<string>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ChangeRootFolder_WritesRootAndSetsStatus_WhenPathSelected()
+    {
+        //Arrange
+        const string NewRoot = @"C:\new\root";
+        _mockRootPickerService.Setup(x => x.PickRoot()).Returns(NewRoot);
+
+        //Act
+        _sut.ChangeRootFolderCommand.Execute(null);
+
+        //Assert
+        _mockRootPointerStore.Verify(s => s.Write(NewRoot), Times.Once());
+        Assert.NotEmpty(_sut.StatusMessage);
+    }
+
+    #endregion
+
+    #region SendTestReport
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SendTestReport_CallsCrashReporterReport_Always()
+    {
+        //Act
+        _sut.SendTestReportCommand.Execute(null);
+
+        //Assert
+        _mockCrashReporter.Verify(r => r.Report(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region Save empty-root and post-Create mode
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SwitchesToEditTreeMode_WhenCreateSucceeds()
+    {
+        //Arrange — no original snapshot (Add mode), repository Create does not throw
+        _mockDirectoryService.Setup(x => x.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    #endregion
+
+    #region Constructor
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Constructor_CallsDirectoryServiceToPopulatePickers_Always()
+    {
+        //Assert
+        _mockDirectoryService.Verify(s => s.GetAll(FakeRoot), Times.AtLeastOnce());
+    }
+
+    #endregion
 }

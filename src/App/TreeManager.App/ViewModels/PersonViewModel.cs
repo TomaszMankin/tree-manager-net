@@ -11,15 +11,33 @@ public sealed partial class PersonViewModel : ObservableObject
 
     public StringListViewModel OtherFirstNames { get; } = new();
 
+    public string OtherFirstNamesText
+    {
+        get => OtherFirstNames.Serialize();
+        set { OtherFirstNames.Load(value); OnPropertyChanged(); }
+    }
+
     [ObservableProperty]
     private string _lastName = string.Empty;
 
     public StringListViewModel OtherLastNames { get; } = new();
 
+    public string OtherLastNamesText
+    {
+        get => OtherLastNames.Serialize();
+        set { OtherLastNames.Load(value); OnPropertyChanged(); }
+    }
+
     [ObservableProperty]
     private string _maidenName = string.Empty;
 
     public StringListViewModel OtherMaidenNames { get; } = new();
+
+    public string OtherMaidenNamesText
+    {
+        get => OtherMaidenNames.Serialize();
+        set { OtherMaidenNames.Load(value); OnPropertyChanged(); }
+    }
 
     [ObservableProperty]
     private bool _hasMaidenName;
@@ -43,10 +61,13 @@ public sealed partial class PersonViewModel : ObservableObject
         Location = meFile.Location;
         FirstName = meFile.FirstName;
         OtherFirstNames.Load(meFile.OtherFirstNames);
+        OnPropertyChanged(nameof(OtherFirstNamesText));
         LastName = meFile.LastName;
         OtherLastNames.Load(meFile.OtherLastNames);
+        OnPropertyChanged(nameof(OtherLastNamesText));
         MaidenName = meFile.MaidenName;
         OtherMaidenNames.Load(meFile.OtherMaidenNames);
+        OnPropertyChanged(nameof(OtherMaidenNamesText));
         HasMaidenName = meFile.HasMaidenName;
         Sex = meFile.Sex;
     }

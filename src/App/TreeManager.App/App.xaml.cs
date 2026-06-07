@@ -116,7 +116,7 @@ public partial class App : Application
             return;
         }
 
-        _services.GetRequiredService<CrashReporter>().Report(ex, source);
+        _services.GetRequiredService<ICrashReporter>().Report(ex, source);
     }
 
     private static void ShowFallbackDialog()
@@ -180,7 +180,7 @@ public partial class App : Application
                 sp.GetRequiredService<ILogger>()));
 
         services.AddSingleton<IQueueRetryService, QueueRetryService>();
-        services.AddSingleton<CrashReporter>();
+        services.AddSingleton<ICrashReporter, CrashReporter>();
         services.AddSingleton<IUpdateService, VelopackUpdateService>();
         services.AddSingleton<IUpdatePromptService, UpdatePromptService>();
         services.AddSingleton<UpdateCoordinator>();

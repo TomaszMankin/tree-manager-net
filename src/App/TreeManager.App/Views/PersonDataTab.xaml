@@ -16,13 +16,17 @@
         <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
 
         <TextBlock Text="Inne imiona (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherFirstNames}" Margin="0,0,0,10"/>
+        <TextBox Text="{Binding OtherFirstNamesText, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"/>
 
         <TextBlock Text="Nazwisko *" Style="{StaticResource FieldLabel}"/>
         <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
 
         <TextBlock Text="Inne nazwiska (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherLastNames}" Margin="0,0,0,10"/>
+        <TextBox Text="{Binding OtherLastNamesText, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"/>
 
         <Separator Margin="0,16,0,20" Background="#E0E0E0"/>
 
@@ -34,8 +38,10 @@
         <TextBox Text="{Binding MaidenName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding HasMaidenName}"/>
 
         <TextBlock Text="Inne nazwiska panieńskie" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherMaidenNames}" Margin="0,0,0,10"
-                                         IsEnabled="{Binding HasMaidenName}"/>
+        <TextBox Text="{Binding OtherMaidenNamesText, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"
+                 IsEnabled="{Binding HasMaidenName}"/>
 
         <TextBlock Text="Płeć *" Style="{StaticResource FieldLabel}"/>
         <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
