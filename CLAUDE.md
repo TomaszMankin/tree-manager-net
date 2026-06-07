@@ -45,7 +45,7 @@ Scope optional but useful: `feat(core): add MeFile record`.
 
 ## Domain glossary
 
-`docs/domain.md` — all domain concepts, Polish terms, algorithms, invariants. Created in sprint-19 (issue #19). Until then, defer domain questions to the GitHub issue body for the sprint touching that term.
+See [docs/domain.md](docs/domain.md) — all domain concepts, Polish terms, algorithms, invariants. Created in sprint-19 (issue #19).
 
 ## Parity with py-tree-manager
 
@@ -59,6 +59,8 @@ This repo is the .NET 10 WPF successor to `TomaszMankin/py-tree-manager`. Same d
 - **e2e**: full end-to-end (sprint-20+).
 
 xUnit `[Trait("Tier", "L0")]` attribute gates CI filter: `dotnet test --filter "Tier=L0"`.
+
+See also: [docs/testing.md](docs/testing.md) for a condensed tier reference.
 
 ## CI
 
