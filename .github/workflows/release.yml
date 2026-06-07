@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: [self-hosted, windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        shell: pwsh
+        id: ver
+        run: |
+          $version = ([xml](Get-Content src/App/TreeManager.App/TreeManager.App.csproj)).Project.PropertyGroup.Version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish src/App/TreeManager.App/TreeManager.App.csproj `
+            -c Release -o publish -r win-x64 --self-contained true
+
+      - name: Velopack release
+        shell: pwsh
+        run: |
+          dotnet tool install -g vpk --version 1.2.0
+          vpk download github `
+            --repoUrl https://github.com/${{ github.repository }} `
+            --token ${{ secrets.GITHUB_TOKEN }} `
+            -o velopack-out
+          vpk pack `
+            -u TreeManager `
+            -v ${{ steps.ver.outputs.version }} `
+            -p publish `
+            --mainExe TreeManager.App.exe `
+            -o velopack-out
+          vpk upload github `
+            --repoUrl https://github.com/${{ github.repository }} `
+            --publish `
+            --releaseName "TreeManager ${{ steps.ver.outputs.version }}" `
+            --tag v${{ steps.ver.outputs.version }} `
+            --token ${{ secrets.GITHUB_TOKEN }} `
+            -o velopack-out
