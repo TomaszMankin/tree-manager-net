@@ -65,8 +65,9 @@ jobs:
           dotnet tool install -g vpk --version 1.2.0
           $version = ([xml](Get-Content src/App/TreeManager.App/TreeManager.App.csproj)).Project.PropertyGroup.Version
           vpk pack -u TreeManager -v $version -p publish --mainExe TreeManager.App.exe -o velopack-out
-          $setupExe = "velopack-out\TreeManager-$version-Setup.exe"
-          if (-not (Test-Path $setupExe)) {
-            Write-Error "Expected setup executable not found: $setupExe"
+          $setupExe = Get-ChildItem "velopack-out" -Filter "*-Setup.exe" | Select-Object -First 1
+          if (-not $setupExe) {
+            Write-Error "No setup executable found in velopack-out"
             exit 1
           }
+          Write-Host "Setup exe: $($setupExe.Name)"
