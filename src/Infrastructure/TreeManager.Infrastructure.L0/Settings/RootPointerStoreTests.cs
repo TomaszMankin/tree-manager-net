@@ -64,7 +64,7 @@ public class RootPointerStoreTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Write_WritesPathToPointerFile_WhenCalled()
+    public void Write_WritesPathToPointerFile_Always()
     {
         //Act
         _sut.Write(FakeRootPath);
@@ -134,7 +134,7 @@ public class RootPointerStoreTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Read_ReturnsEmpty_AndLogsError_WhenOldFileUnreadable()
+    public void Read_ReturnsEmptyAndLogsError_WhenOldFileUnreadable()
     {
         //Arrange
         var fs = new Mock<IFileSystemFacade>();
@@ -157,7 +157,7 @@ public class RootPointerStoreTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void ResolveDefaultPointerPath_ReturnsPathUnderPyTreeManager()
+    public void ResolveDefaultPointerPath_ReturnsPathUnderPyTreeManager_Always()
     {
         //Arrange
         var expectedSubdir = "PyTreeManager";
