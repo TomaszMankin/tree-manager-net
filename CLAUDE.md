@@ -65,9 +65,13 @@ See also: [docs/testing.md](docs/testing.md) for a condensed tier reference.
 ## CI
 
 GitHub Actions, self-hosted Windows runner (`runs-on: [self-hosted, windows]`).
-Workflow: `.github/workflows/ci.yml` — restore → build (Release) → L0 → L1 → upload results.
+Workflow: `.github/workflows/ci.yml` — restore → build (Release) → L0 → L1 → coverage gate → upload results.
 Composite action: `.github/actions/run-test-tier` — parameterised by `tier` input. Add new tiers by invoking with a new `tier:` value — no action changes needed.
 L2/e2e steps present in workflow but gated `if: false` — flip to `if: success()` when suites exist (sprint-20).
+
+## Coverage gate
+
+CI enforces Core ≥80% line / ≥70% branch and Infra ≥70% line. To bypass for urgent unrelated fixes, add the `skip-coverage` label to the PR. Use sparingly — the gate exists to protect cutover quality.
 
 ## Email escalation config (appsettings.user.json)
 

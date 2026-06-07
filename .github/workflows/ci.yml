@@ -32,6 +32,34 @@ jobs:
         with:
           tier: L1
 
+      - name: Coverage gate
+        if: ${{ !(github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'skip-coverage')) }}
+        shell: pwsh
+        run: |
+          dotnet test src/Core/TreeManager.Core.L0/TreeManager.Core.L0.csproj `
+            -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:ExcludeByAttribute=GeneratedCodeAttribute `
+            "/p:ExcludeByFile=**/*.g.cs" `
+            "/p:Include=[TreeManager.Core]*" `
+            /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=minimum
+
+          dotnet test src/Core/TreeManager.Core.L0/TreeManager.Core.L0.csproj `
+            -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:ExcludeByAttribute=GeneratedCodeAttribute `
+            "/p:ExcludeByFile=**/*.g.cs" `
+            "/p:Include=[TreeManager.Core]*" `
+            /p:Threshold=70 /p:ThresholdType=branch /p:ThresholdStat=minimum
+
+          dotnet test src/Infrastructure/TreeManager.Infrastructure.L0/TreeManager.Infrastructure.L0.csproj `
+            -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:ExcludeByAttribute=GeneratedCodeAttribute `
+            "/p:ExcludeByFile=**/*.g.cs" `
+            "/p:Include=[TreeManager.Infrastructure]*" `
+            /p:Threshold=70 /p:ThresholdType=line /p:ThresholdStat=minimum
+
       - name: Live SMTP test
         shell: pwsh
         env:
