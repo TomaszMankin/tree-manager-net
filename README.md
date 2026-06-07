@@ -1,5 +1,10 @@
 # tree-manager-net
 
+## Documentation
+
+- [docs/domain.md](docs/domain.md) — Polish domain glossary (Lista osób, Rody, Drzewo, Poczekalnia, etc.)
+- [docs/testing.md](docs/testing.md) — test tier definitions and CI gate
+
 ## Email escalation setup
 
 When the app crashes it sends an alert email. To enable this, create `appsettings.user.json` in the same folder as the application executable and fill it in as shown below. If the file is absent or incomplete the app still works — crash alerts are silently skipped.

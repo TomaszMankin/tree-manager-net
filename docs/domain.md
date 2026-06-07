@@ -2,7 +2,7 @@
 
 ## Drzewo (folder-tree view)
 
-The Drzewo view is a flat directory `<root>/Drzewo/` containing one `.lnk` shortcut per person in the hourglass selection from a chosen root person. Each shortcut points at that person's folder under `Lista osób/`.
+The 'Drzewo' view is a flat directory `<root>/Drzewo/` containing one `.lnk` shortcut per person in the hourglass selection from a chosen root person. Each shortcut points at that person's folder under `'Lista osób'`.
 
 ### Filename convention
 
@@ -32,4 +32,27 @@ Windows Explorer sorts by filename. The `NN` prefix places ancestors (higher NN)
 
 The couple-code width is determined per generation from the total couple count: ≤26 → 1 letter, ≤676 → 2 letters, etc. (base-26 ladder).
 
-> Full domain glossary: issue #19.
+## Lista osób (people list)
+
+`<root>/'Lista osób'/` — one subfolder per person, each holding `me.json`. The authoritative people store; the main scan descends only this folder. Example: `<root>/'Lista osób'/Kowalski Jan/me.json`.
+
+## me.json + partial-date format
+
+Per-person record file stored as `me.json` in each person's folder. Dates serialized as `DD|MM|YYYY` with `--` for unknown components; year may be a partial string (`184-` for a decade, `18--` for a century). Example: birth date `12|03|1947`, year-only `--|--|1847`, decade `--|--|184-`.
+
+## Rody (lineage folders)
+
+`<root>/'Rody'/<lineage-surname>/` shortcut folders grouping a contributor's bloodline. Contributor = a parent of the root person OR a parent of the root person's spouse. Membership = the contributor's descendants (subtree) + contributor's spouses + full ancestor bloodline walked upward (no surname gate). Surname-clash: when two contributors share a surname, the folder name escalates to their full display name. Example: paternal grandfather and maternal grandmother both surnamed Kowalski → two full-name folders under `'Rody'/`, not one merged folder.
+
+## Poczekalnia (drafts)
+
+`<root>/'Poczekalnia'/` sibling staging folder for work-in-progress people. Excluded from the main scan by location (not by a name list). Never relationship-synced while parked; no minimum-relationship rule applies. Promotion moves the draft into `'Lista osób'`, runs bidirectional sync, then deletes the draft. Recoverable on failure. Example: a new person created offline sits in `<root>/'Poczekalnia'/Nowak Tomasz/` until approved, then moves to `<root>/'Lista osób'/Nowak Tomasz/`.
+
+## Bidirectional relationship sync invariant
+
+Every relationship is stored on BOTH people's `me.json`. UUID is authoritative; the cached display name is a convenience copy refreshed on rename. Sync is idempotent — re-running de-dupes. Example: adding Anna as Jan's mother also writes Jan into Anna's children list immediately, with no manual step.
+
+## Forbidden folder names (py-tree-manager heritage)
+
+py-tree-manager skipped a named set during scanning (`'Pozostałe nieuporządkowane'`, `'Rutowscy - dane ogólne'`, `'Do ustalenia'`, `'Wspólne'`). tree-manager-net does NOT maintain such a list: the scan descends only `'Lista osób'`, and drafts are isolated by their sibling location, not by an exclusion set.
+
