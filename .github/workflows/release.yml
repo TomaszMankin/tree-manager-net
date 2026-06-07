@@ -4,6 +4,15 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from (leave blank to use the ref selected in the UI)'
+        required: false
+        default: ''
+      version:
+        description: 'Version override, e.g. 1.0.1-beta (leave blank to read from csproj)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -13,12 +22,19 @@ jobs:
     runs-on: [self-hosted, windows]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
 
       - name: Read version
         shell: pwsh
         id: ver
         run: |
-          $version = ([xml](Get-Content src/App/TreeManager.App/TreeManager.App.csproj)).Project.PropertyGroup.Version
+          $override = '${{ inputs.version }}'
+          if ($override -ne '') {
+            $version = $override
+          } else {
+            $version = ([xml](Get-Content src/App/TreeManager.App/TreeManager.App.csproj)).Project.PropertyGroup.Version
+          }
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Publish
