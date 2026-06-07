@@ -5,6 +5,7 @@ using Moq;
 using Serilog;
 using TreeManager.App.Services;
 using TreeManager.App.ViewModels;
+using TreeManager.App.Converters;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
@@ -35,6 +36,8 @@ public class MainViewModelTests
     private readonly Mock<IValidationMessageFormatter> _mockFormatter;
     private readonly Mock<IValidationReportService> _mockReportService;
     private readonly Mock<IMeFileProcessor> _mockProcessor;
+    private readonly Mock<IPromoteConfirmService> _mockPromoteConfirm;
+    private readonly Mock<IFolderRevealService> _mockFolderReveal;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -56,6 +59,8 @@ public class MainViewModelTests
         _mockFormatter = new Mock<IValidationMessageFormatter>();
         _mockReportService = new Mock<IValidationReportService>();
         _mockProcessor = new Mock<IMeFileProcessor>();
+        _mockPromoteConfirm = new Mock<IPromoteConfirmService>();
+        _mockFolderReveal = new Mock<IFolderRevealService>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
@@ -88,6 +93,11 @@ public class MainViewModelTests
             .Setup(p => p.ScanMeFiles(It.IsAny<string>()))
             .Returns(new List<string>());
 
+        // Default: promote confirm accepts — keeps all existing PromoteDraft tests green
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+
+        // Default: folder reveal is a no-op
+
         var deps = new PersonEditDependencies(
             _mockDirectoryService.Object,
             _mockPickerService.Object,
@@ -95,7 +105,9 @@ public class MainViewModelTests
             _mockDirtyTracker.Object,
             _mockDirtyGuard.Object,
             _mockDraftRepository.Object,
-            _mockDraftPromoter.Object);
+            _mockDraftPromoter.Object,
+            _mockPromoteConfirm.Object,
+            _mockFolderReveal.Object);
 
         var folderTreeDeps = new FolderTreeCommandDependencies(
             _mockFolderTreeGenerator.Object,
@@ -1218,6 +1230,242 @@ public class MainViewModelTests
         Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
         _mockReportService.Verify(s => s.Show(It.IsAny<IReadOnlyList<string>>()), Times.Never());
         _mockLog.Verify(x => x.Error(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region StatusMessage — Save and SaveAsDraft
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SetsStatusMessage_OnSuccessfulSave()
+    {
+        //Arrange
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Zapisano osobę.", _sut.StatusMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_SetsStatusMessage_WhenDraftSaved()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Zapisano szkic.", _sut.StatusMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ClearsStatusMessage_AtStartOfCommand()
+    {
+        //Arrange — set a stale status first
+        _sut.SaveAsDraftCommand.Execute(null);
+        _mockPersonRepository
+            .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
+            .Throws<IOException>();
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert — error path: StatusMessage was cleared at start
+        Assert.True(string.IsNullOrEmpty(_sut.StatusMessage));
+    }
+
+    #endregion
+
+    #region SwitchMode — Add reset and picker load
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_ClearsPersonFields_WhenSwitchingToAdd()
+    {
+        //Arrange — load a person so fields have data
+        SimulateLoadedPerson();
+        _sut.Person.FirstName = "SomeValue";
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert
+        Assert.Equal(string.Empty, _sut.Person.FirstName);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_LoadsTreePeopleIntoPickers_WhenSwitchingToAdd()
+    {
+        //Arrange — put sut in EditTree mode first so switching to Add is not a no-op
+        _sut.SwitchModeCommand.Execute(AppMode.EditTree);
+        var person1 = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
+        var person2 = new PersonSummary(Guid.NewGuid(), "Ewa Nowak");
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new List<PersonSummary> { person1, person2 });
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert — pickers loaded with 2 people; no selections, no exclusions → 2 candidates
+        Assert.Equal(2, _sut.Family.Parents.Candidates.Count);
+    }
+
+    #endregion
+
+    #region WindowTitle
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void WindowTitle_ReflectsMode_WhenModeChanges()
+    {
+        //Arrange — start in Add
+        Assert.Contains("Nowa osoba", _sut.WindowTitle);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.EditTree);
+
+        //Assert
+        Assert.Contains("Edycja osoby", _sut.WindowTitle);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void WindowTitle_ContainsEditDraftLabel_WhenInEditDraftMode()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Assert
+        Assert.Contains("Edycja szkicu", _sut.WindowTitle);
+    }
+
+    #endregion
+
+    #region PromoteDraft — CanExecute
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_CanExecuteFalse_WhenModeIsAdd()
+    {
+        //Arrange — default mode is Add
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+
+        //Assert
+        Assert.False(_sut.PromoteDraftCommand.CanExecute(null));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_CanExecuteTrue_WhenModeIsEditDraft()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Assert
+        Assert.True(_sut.PromoteDraftCommand.CanExecute(null));
+    }
+
+    #endregion
+
+    #region PromoteDraft — confirm gate
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_DoesNotPromote_WhenConfirmDeclined()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(false);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_Promotes_WhenConfirmAccepted()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_PassesSummaryContainingPersonName_WhenConfirming()
+    {
+        //Arrange
+        var draftId = Guid.NewGuid();
+        var draftSummary = new PersonSummary(draftId, "Maria Wiśniewska");
+        var draftMeFile = new MeFile { UniqueIdentifier = draftId, PersonName = "Maria Wiśniewska", FirstName = "Maria", LastName = "Wiśniewska" };
+        SetupDraftPickAndRead(draftSummary, draftMeFile);
+        _sut.LoadDraftCommand.Execute(null);
+
+        string capturedSummary = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>()))
+            .Callback<string>(s => capturedSummary = s)
+            .Returns(true);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotNull(capturedSummary);
+        Assert.Contains("Maria", capturedSummary);
+    }
+
+    #endregion
+
+    #region OpenDataFolder
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenDataFolder_RevealsRootPath_WhenRootSet()
+    {
+        //Arrange — root is set to FakeRoot by default
+
+        //Act
+        _sut.OpenDataFolderCommand.Execute(null);
+
+        //Assert
+        _mockFolderReveal.Verify(s => s.Reveal(FakeRoot), Times.Once());
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenDataFolder_SetsError_WhenRootPathEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.OpenDataFolderCommand.Execute(null);
+
+        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        _mockFolderReveal.Verify(s => s.Reveal(It.IsAny<string>()), Times.Never());
     }
 
     #endregion

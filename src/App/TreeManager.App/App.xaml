@@ -7,6 +7,8 @@
         <SolidColorBrush x:Key="EditTreeModeBrush" Color="#E0F7FA"/>
         <SolidColorBrush x:Key="EditDraftModeBrush" Color="#F9FBE7"/>
         <conv:ModeToBackgroundBrushConverter x:Key="ModeToBackgroundBrushConverter"/>
+        <conv:ModeToLabelConverter x:Key="ModeToLabelConverter"/>
+        <conv:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         <conv:SexToBoolConverter x:Key="SexToBoolConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 

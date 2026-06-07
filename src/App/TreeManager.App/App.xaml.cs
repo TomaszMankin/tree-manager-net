@@ -149,6 +149,8 @@ public partial class App : Application
         services.AddSingleton<IDirtyGuardService, DirtyGuardService>();
         services.AddSingleton<IDraftRepository, DraftRepository>();
         services.AddSingleton<IDraftPromoter, DraftPromoter>();
+        services.AddSingleton<IPromoteConfirmService, PromoteConfirmService>();
+        services.AddSingleton<IFolderRevealService, FolderRevealService>();
         services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
         services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
