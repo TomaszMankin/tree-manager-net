@@ -10,16 +10,24 @@
     <StackPanel Margin="32,24">
 
         <TextBlock Text="Data urodzin" Style="{StaticResource SectionHeader}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <CheckBox Content="Przed" IsChecked="{Binding BirthDate.IsBefore}" Margin="0,0,16,0"/>
+            <CheckBox Content="Około" IsChecked="{Binding BirthDate.IsApprox}"/>
+        </StackPanel>
         <views:OptionalDatePickerControl DataContext="{Binding BirthDate}" Margin="0,0,0,24"/>
 
         <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
 
-        <CheckBox Content="Czy&#160;zmar&#322;(a)?"
+        <CheckBox Content="Czy zmarł(a)?"
                   IsChecked="{Binding IsDeceased}"
                   Margin="0,0,0,16" FontSize="14"/>
 
         <StackPanel Visibility="{Binding IsDeceased, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="Data &#347;mierci" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Text="Data śmierci" Style="{StaticResource SectionHeader}"/>
+            <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsDeceased}" Margin="0,0,0,8">
+                <CheckBox Content="Przed" IsChecked="{Binding DeathDate.IsBefore}" Margin="0,0,16,0"/>
+                <CheckBox Content="Około" IsChecked="{Binding DeathDate.IsApprox}"/>
+            </StackPanel>
             <views:OptionalDatePickerControl DataContext="{Binding DeathDate}"/>
         </StackPanel>
 

@@ -202,4 +202,115 @@ public class DatesTabViewModelMapperTests
     {
         Assert.Throws<ArgumentNullException>(() => ((DatesTabViewModel)null).ToMeFile());
     }
+
+    #region ToDatesTabViewModel — qualifier flags
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData("<12|03|1947", true, false)]
+    [InlineData("~12|03|1947", false, true)]
+    [InlineData("~<12|03|1947", true, true)]
+    public void ToDatesTabViewModel_MapsBirthQualifiers_WhenPrefixPresent(
+        string datesOfBirth, bool expectedIsBefore, bool expectedIsApprox)
+    {
+        //Arrange
+        var meFile = new MeFile { DatesOfBirth = datesOfBirth };
+
+        //Act
+        var vm = meFile.ToDatesTabViewModel();
+
+        //Assert
+        Assert.Equal(expectedIsBefore, vm.BirthDate.IsBefore);
+        Assert.Equal(expectedIsApprox, vm.BirthDate.IsApprox);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToDatesTabViewModel_MapsDeathQualifiers_WhenDeathPrefixPresent()
+    {
+        //Arrange
+        var meFile = new MeFile { DatesOfDeath = "~<--|--|1900" };
+
+        //Act
+        var vm = meFile.ToDatesTabViewModel();
+
+        //Assert
+        Assert.True(vm.IsDeceased);
+        Assert.True(vm.DeathDate.IsBefore);
+        Assert.True(vm.DeathDate.IsApprox);
+    }
+
+    #endregion
+
+    #region ToMeFile — qualifier flags
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_SerializesBirthQualifierPrefix_WhenFlagsSet()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.BirthDate.Day = "12";
+        vm.BirthDate.Month = "3";
+        vm.BirthDate.Year = "1947";
+        vm.BirthDate.IsBefore = true;
+        vm.BirthDate.IsApprox = true;
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal("~<12|03|1947", result.DatesOfBirth);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_DropsBirthQualifiers_WhenAllDateComponentsEmpty()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.BirthDate.Day = null;
+        vm.BirthDate.Month = null;
+        vm.BirthDate.Year = null;
+        vm.BirthDate.IsBefore = true;
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal(string.Empty, result.DatesOfBirth);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_DropsDeathQualifiers_WhenIsDeceasedToggledOff()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel();
+        vm.IsDeceased = true;
+        vm.DeathDate.IsBefore = true;
+        vm.IsDeceased = false;
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal(string.Empty, result.DatesOfDeath);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_RoundTripsBirthQualifiers_WhenMappedBackAndForth()
+    {
+        //Arrange
+        var meFile = new MeFile { DatesOfBirth = "~<12|03|1947" };
+
+        //Act
+        var result = meFile.ToDatesTabViewModel().ToMeFile(meFile);
+
+        //Assert
+        Assert.Equal("~<12|03|1947", result.DatesOfBirth);
+    }
+
+    #endregion
 }

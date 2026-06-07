@@ -18,6 +18,8 @@ public static class DatesTabViewModelMapper
             vm.BirthDate.Day = birth.Day?.ToString();
             vm.BirthDate.Month = birth.Month?.ToString();
             vm.BirthDate.Year = birth.Year;
+            vm.BirthDate.IsBefore = birth.IsBefore;
+            vm.BirthDate.IsApprox = birth.IsApprox;
         }
 
         if (!string.IsNullOrEmpty(meFile.DatesOfDeath))
@@ -27,6 +29,8 @@ public static class DatesTabViewModelMapper
             vm.DeathDate.Day = death.Day?.ToString();
             vm.DeathDate.Month = death.Month?.ToString();
             vm.DeathDate.Year = death.Year;
+            vm.DeathDate.IsBefore = death.IsBefore;
+            vm.DeathDate.IsApprox = death.IsApprox;
         }
 
         return vm;
@@ -47,13 +51,21 @@ public static class DatesTabViewModelMapper
             : new PartialDate(
                 int.TryParse(vm.BirthDate.Day, out var bd) ? bd : (int?)null,
                 int.TryParse(vm.BirthDate.Month, out var bm) ? bm : (int?)null,
-                vm.BirthDate.Year);
+                vm.BirthDate.Year)
+            {
+                IsBefore = vm.BirthDate.IsBefore,
+                IsApprox = vm.BirthDate.IsApprox,
+            };
 
         var death = vm.IsDeceased
             ? new PartialDate(
                 int.TryParse(vm.DeathDate.Day, out var dd) ? dd : (int?)null,
                 int.TryParse(vm.DeathDate.Month, out var dm) ? dm : (int?)null,
                 vm.DeathDate.Year)
+            {
+                IsBefore = vm.DeathDate.IsBefore,
+                IsApprox = vm.DeathDate.IsApprox,
+            }
             : (PartialDate?)null;
 
         return baseFile with
