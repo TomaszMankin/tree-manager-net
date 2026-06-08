@@ -30,6 +30,14 @@ public sealed partial class MainViewModel : ObservableObject
     private const string SetRootPersonNoRootMessage = "Nie wybrano folderu z danymi.";
     private const string ChangeRootFolderSuccessMessage = "Zmieniono folder z danymi.";
     private const string EmptyRootMessage = "Nie wybrano folderu z danymi.";
+    private const string DialogTitleInfo = "Informacja";
+    private const string DialogTitleBłąd = "Błąd";
+    private const string SavePersonDialogTitle = "Zapisano osobę";
+    private const string SaveDraftDialogTitle = "Zapisano szkic";
+    private const string UpdateDraftDialogTitle = "Zaktualizowano szkic";
+    private const string GenerateTreeDialogTitle = "Generowanie drzewa";
+    private const string GenerateLineageDialogTitle = "Generowanie rodów";
+    private const string MinRelationshipMessage = "Osoba musi mieć przynajmniej jedną relację.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -89,12 +97,15 @@ public sealed partial class MainViewModel : ObservableObject
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
-    private string _windowTitle = "TreeManager — Nowa osoba";
+    private string _windowTitle = "TreeManager — Dodawanie nowej osoby";
 
     partial void OnCurrentModeChanged(AppMode value)
     {
         WindowTitle = BuildWindowTitle(value);
         PromoteDraftCommand.NotifyCanExecuteChanged();
+        SaveCommand.NotifyCanExecuteChanged();
+        SaveAsDraftCommand.NotifyCanExecuteChanged();
+        UpdateDraftCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -105,7 +116,10 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var current = AssembleCurrentMeFile();
+        var rootPath = _rootPointerStore.Read();
+        var current = string.IsNullOrWhiteSpace(rootPath)
+            ? AssembleCurrentMeFile()
+            : ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
         if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
         {
             if (!_editDeps.DirtyGuard.ConfirmDiscard())
@@ -143,7 +157,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var currentSnapshot = AssembleCurrentMeFile();
+        var currentSnapshot = ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
         if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, currentSnapshot))
         {
             if (!_editDeps.DirtyGuard.ConfirmDiscard())
@@ -167,7 +181,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private void Save()
     {
         StatusMessage = string.Empty;
@@ -182,6 +196,7 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // 1. Validate minimum relationship requirement
             var totalRelationships =
                 Family.Parents.Selected.Count +
                 Family.Children.Selected.Count +
@@ -192,7 +207,8 @@ public sealed partial class MainViewModel : ObservableObject
                 var existingPeople = _editDeps.DirectoryService.GetAll(rootPath);
                 if (existingPeople.Count > 0)
                 {
-                    ErrorMessage = "Osoba musi mieć przynajmniej jedną relację.";
+                    ErrorMessage = MinRelationshipMessage;
+                    _editDeps.InfoDialog.Show(DialogTitleBłąd, MinRelationshipMessage);
                     return;
                 }
             }
@@ -200,8 +216,16 @@ public sealed partial class MainViewModel : ObservableObject
             var meFile = AssembleCurrentMeFile();
             meFile = ApplyIdentityOverlay(meFile, rootPath);
 
+            // 2. Pre-save confirm
+            var summary = BuildSaveSummary(meFile);
+            if (!_editDeps.PromoteConfirmService.Confirm(summary))
+            {
+                return;
+            }
+
             if (_originalSnapshot == null)
             {
+                // 3. Create new person
                 _personRepository.Create(meFile, rootPath);
                 _originalSnapshot = meFile;
                 CurrentMode = AppMode.EditTree;
@@ -209,6 +233,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
             else
             {
+                // 3. Update existing person
                 _personRepository.Update(meFile, _originalSnapshot, rootPath);
                 _originalSnapshot = meFile;
             }
@@ -216,6 +241,9 @@ public sealed partial class MainViewModel : ObservableObject
             Family.LoadedPersonId = meFile.UniqueIdentifier;
             ErrorMessage = string.Empty;
             StatusMessage = SavePersonSuccessMessage;
+
+            // 4. Post-save success dialog
+            _editDeps.InfoDialog.Show(SavePersonDialogTitle, meFile.Location);
         }
         catch (Exception ex)
         {
@@ -228,7 +256,9 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanSave() => CurrentMode == AppMode.Add || CurrentMode == AppMode.EditTree;
+
+    [RelayCommand(CanExecute = nameof(CanSaveAsDraft))]
     private void SaveAsDraft()
     {
         StatusMessage = string.Empty;
@@ -246,8 +276,11 @@ public sealed partial class MainViewModel : ObservableObject
             meFile = ApplyIdentityOverlay(meFile, rootPath);
 
             _editDeps.DraftRepository.SaveDraft(meFile, rootPath);
+            _originalSnapshot = meFile;
             ErrorMessage = string.Empty;
             StatusMessage = SaveDraftSuccessMessage;
+            CurrentMode = AppMode.EditDraft;
+            _editDeps.InfoDialog.Show(SaveDraftDialogTitle, SaveDraftSuccessMessage);
         }
         catch (Exception ex)
         {
@@ -255,6 +288,40 @@ public sealed partial class MainViewModel : ObservableObject
             ErrorMessage = "Nie udało się zapisać szkicu. Spróbuj ponownie.";
         }
     }
+
+    private bool CanSaveAsDraft() => CurrentMode == AppMode.Add;
+
+    [RelayCommand(CanExecute = nameof(CanUpdateDraft))]
+    private void UpdateDraft()
+    {
+        StatusMessage = string.Empty;
+        var rootPath = _rootPointerStore.Read();
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            _log.Warning("UpdateDraft called with empty root path");
+            ErrorMessage = EmptyRootMessage;
+            return;
+        }
+
+        try
+        {
+            var meFile = AssembleCurrentMeFile();
+            meFile = ApplyIdentityOverlay(meFile, rootPath);
+
+            _editDeps.DraftRepository.SaveDraft(meFile, rootPath);
+            _originalSnapshot = meFile;
+            ErrorMessage = string.Empty;
+            StatusMessage = SaveDraftSuccessMessage;
+            _editDeps.InfoDialog.Show(UpdateDraftDialogTitle, SaveDraftSuccessMessage);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "UpdateDraft failed");
+            ErrorMessage = "Nie udało się zaktualizować szkicu. Spróbuj ponownie.";
+        }
+    }
+
+    private bool CanUpdateDraft() => CurrentMode == AppMode.EditDraft;
 
     [RelayCommand]
     private void LoadDraft()
@@ -267,7 +334,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var current = AssembleCurrentMeFile();
+        var current = ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
         if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
         {
             if (!_editDeps.DirtyGuard.ConfirmDiscard())
@@ -375,6 +442,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("GenerateFolderTree called with empty root path");
+            _editDeps.InfoDialog.Show(GenerateTreeDialogTitle, EmptyRootMessage);
             return;
         }
 
@@ -382,6 +450,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (rootPersonId == Guid.Empty)
         {
             ErrorMessage = GenerateFolderTreeNoRootMessage;
+            _editDeps.InfoDialog.Show(GenerateTreeDialogTitle, GenerateFolderTreeNoRootMessage);
             return;
         }
 
@@ -391,12 +460,14 @@ public sealed partial class MainViewModel : ObservableObject
             var result = _folderTreeDeps.Generator.Generate(rootPath, rootPersonId);
             ErrorMessage = string.Empty;
             StatusMessage = string.Format(GenerateFolderTreeSuccessTemplate, result.Written);
+            _editDeps.InfoDialog.Show(GenerateTreeDialogTitle, string.Format(GenerateFolderTreeSuccessTemplate, result.Written));
         }
         catch (Exception ex)
         {
             _log.Error(ex, "GenerateFolderTree failed");
             ErrorMessage = GenerateFolderTreeErrorMessage;
             StatusMessage = string.Empty;
+            _editDeps.InfoDialog.Show(GenerateTreeDialogTitle, GenerateFolderTreeErrorMessage);
         }
         finally
         {
@@ -411,6 +482,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(rootPath))
         {
             _log.Warning("GenerateLineageFolders called with empty root path");
+            _editDeps.InfoDialog.Show(GenerateLineageDialogTitle, EmptyRootMessage);
             return;
         }
 
@@ -418,6 +490,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (rootPersonId == Guid.Empty)
         {
             ErrorMessage = GenerateLineageNoRootMessage;
+            _editDeps.InfoDialog.Show(GenerateLineageDialogTitle, GenerateLineageNoRootMessage);
             return;
         }
 
@@ -427,18 +500,21 @@ public sealed partial class MainViewModel : ObservableObject
             var result = _folderTreeDeps.LineageGenerator.Generate(rootPath, rootPersonId);
             ErrorMessage = string.Empty;
             StatusMessage = string.Format(GenerateLineageSuccessTemplate, result.Written);
+            _editDeps.InfoDialog.Show(GenerateLineageDialogTitle, string.Format(GenerateLineageSuccessTemplate, result.Written));
         }
         catch (TreeIntegrityException ex)
         {
             _log.Error(ex, "GenerateLineageFolders: tree integrity violation");
             ErrorMessage = GenerateLineageIntegrityErrorMessage;
             StatusMessage = string.Empty;
+            _editDeps.InfoDialog.Show(GenerateLineageDialogTitle, GenerateLineageIntegrityErrorMessage);
         }
         catch (Exception ex)
         {
             _log.Error(ex, "GenerateLineageFolders failed");
             ErrorMessage = GenerateLineageErrorMessage;
             StatusMessage = string.Empty;
+            _editDeps.InfoDialog.Show(GenerateLineageDialogTitle, GenerateLineageErrorMessage);
         }
         finally
         {
@@ -578,9 +654,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var modeLabel = mode switch
         {
-            AppMode.Add => "Nowa osoba",
-            AppMode.EditTree => "Edycja osoby",
-            AppMode.EditDraft => "Edycja szkicu",
+            AppMode.Add => "Dodawanie nowej osoby",
+            AppMode.EditTree => "Edycja osoby z drzewa",
+            AppMode.EditDraft => "Edycja szkicu osoby",
             _ => string.Empty
         };
 
@@ -596,5 +672,13 @@ public sealed partial class MainViewModel : ObservableObject
              + $"Rodzice: {meFile.ParentsId.Count}\n"
              + $"Małżonkowie: {meFile.SpouseId.Count}\n"
              + $"Dzieci: {meFile.ChildrenId.Count}";
+    }
+
+    private static string BuildSaveSummary(MeFile meFile)
+    {
+        return $"Nowa osoba:\n{meFile.FirstName} {meFile.LastName}\n"
+             + $"Rodzice: {meFile.ParentsId.Count}\n"
+             + $"Małżonkowie: {meFile.SpouseId.Count}\n"
+             + $"Dzieci: {meFile.ChildrenId.Count}\n\nZapisać?";
     }
 }

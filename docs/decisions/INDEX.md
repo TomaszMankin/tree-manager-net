@@ -25,3 +25,4 @@
 | 021 | Velopack setup as the installer; no separate Inno Setup script | Accepted | 2026-06-07 |
 | 022 | Coverage thresholds enforced in CI before cutover | Accepted | 2026-06-07 |
 | 023 | Root-person selection for 'Generuj' commands | Accepted | 2026-06-07 |
+| 024 | Per-mode command availability matrix | Accepted | 2026-06-08 |

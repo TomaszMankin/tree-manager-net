@@ -11,4 +11,5 @@ public sealed record PersonEditDependencies(
     IDraftRepository DraftRepository,
     IDraftPromoter DraftPromoter,
     IPromoteConfirmService PromoteConfirmService,
-    IFolderRevealService FolderRevealService);
+    IFolderRevealService FolderRevealService,
+    IInfoDialogService InfoDialog);

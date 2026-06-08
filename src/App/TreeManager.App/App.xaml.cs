@@ -179,6 +179,7 @@ public partial class App : Application
         services.AddSingleton<IDraftPromoter, DraftPromoter>();
         services.AddSingleton<IPromoteConfirmService, PromoteConfirmService>();
         services.AddSingleton<IFolderRevealService, FolderRevealService>();
+        services.AddSingleton<IInfoDialogService, InfoDialogService>();
         services.AddSingleton<PersonEditDependencies>();
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
         services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();

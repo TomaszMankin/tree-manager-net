@@ -173,6 +173,12 @@ public sealed class PersonRepository : IPersonRepository
         ArgumentNullException.ThrowIfNull(person);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
 
+        if (person.UniqueIdentifier == Guid.Empty)
+        {
+            _log.Error("Create called with Guid.Empty UniqueIdentifier for {PersonName} — skipped", person.PersonName);
+            return;
+        }
+
         Create(person, rootPath, person.PersonName);
     }
 

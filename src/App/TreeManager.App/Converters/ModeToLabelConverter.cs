@@ -16,9 +16,9 @@ public sealed class ModeToLabelConverter : IValueConverter
 
         return mode switch
         {
-            AppMode.Add => "Nowa osoba",
-            AppMode.EditTree => "Edycja osoby",
-            AppMode.EditDraft => "Edycja szkicu",
+            AppMode.Add => "Dodawanie nowej osoby",
+            AppMode.EditTree => "Edycja osoby z drzewa",
+            AppMode.EditDraft => "Edycja szkicu osoby",
             _ => string.Empty
         };
     }

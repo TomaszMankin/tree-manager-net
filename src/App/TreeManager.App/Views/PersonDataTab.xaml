@@ -17,16 +17,18 @@
 
         <TextBlock Text="Inne imiona (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
         <TextBox Text="{Binding OtherFirstNamesText, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"/>
+                 Style="{StaticResource MultilineTextBox}"
+                 AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"/>
 
         <TextBlock Text="Nazwisko *" Style="{StaticResource FieldLabel}"/>
         <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
 
         <TextBlock Text="Inne nazwiska (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
         <TextBox Text="{Binding OtherLastNamesText, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"/>
+                 Style="{StaticResource MultilineTextBox}"
+                 AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"/>
 
         <Separator Margin="0,16,0,20" Background="#E0E0E0"/>
 
@@ -39,8 +41,9 @@
 
         <TextBlock Text="Inne nazwiska panieńskie" Style="{StaticResource FieldLabel}"/>
         <TextBox Text="{Binding OtherMaidenNamesText, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="True" MinHeight="56" TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"
+                 Style="{StaticResource MultilineTextBox}"
+                 AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
                  IsEnabled="{Binding HasMaidenName}"/>
 
         <TextBlock Text="Płeć *" Style="{StaticResource FieldLabel}"/>

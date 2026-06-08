@@ -144,6 +144,25 @@ public class PersonRepositoryTests
         _processor.Verify(x => x.WriteMeFile(PersonMeJson, person), Times.Once());
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Create_SkipsAndLogsError_WhenUniqueIdentifierIsEmpty()
+    {
+        //Arrange
+        var personWithEmptyId = new MeFile { UniqueIdentifier = Guid.Empty, PersonName = "Jan Kowalski" };
+        SetupEmptyScan();
+
+        //Act
+        _sut.Create(personWithEmptyId, RootPath);
+
+        //Assert — no filesystem writes; error logged
+        _fs.Verify(x => x.CreateDirectory(It.IsAny<string>()), Times.Never());
+        _processor.Verify(x => x.WriteMeFile(It.IsAny<string>(), It.IsAny<MeFile>()), Times.Never());
+        _mockLogger.Verify(
+            x => x.Error(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once());
+    }
+
     #endregion
 
     #region Update

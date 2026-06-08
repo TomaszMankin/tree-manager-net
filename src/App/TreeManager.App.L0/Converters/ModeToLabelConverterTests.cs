@@ -14,35 +14,35 @@ public class ModeToLabelConverterTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Convert_ReturnsNowaOsoba_WhenModeIsAdd()
+    public void Convert_ReturnsDodawanieNowejOsoby_WhenModeIsAdd()
     {
         //Act
         var result = _sut.Convert(AppMode.Add, typeof(string), null, CultureInfo.InvariantCulture);
 
         //Assert
-        Assert.Equal("Nowa osoba", result);
+        Assert.Equal("Dodawanie nowej osoby", result);
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Convert_ReturnsEdycjaOsoby_WhenModeIsEditTree()
+    public void Convert_ReturnsEdycjaOsobyZDrzewa_WhenModeIsEditTree()
     {
         //Act
         var result = _sut.Convert(AppMode.EditTree, typeof(string), null, CultureInfo.InvariantCulture);
 
         //Assert
-        Assert.Equal("Edycja osoby", result);
+        Assert.Equal("Edycja osoby z drzewa", result);
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void Convert_ReturnsEdycjaSzkicu_WhenModeIsEditDraft()
+    public void Convert_ReturnsEdycjaSzkicuOsoby_WhenModeIsEditDraft()
     {
         //Act
         var result = _sut.Convert(AppMode.EditDraft, typeof(string), null, CultureInfo.InvariantCulture);
 
         //Assert
-        Assert.Equal("Edycja szkicu", result);
+        Assert.Equal("Edycja szkicu osoby", result);
     }
 
     [Fact]
