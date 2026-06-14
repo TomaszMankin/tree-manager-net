@@ -420,6 +420,44 @@ public class LineageFolderGeneratorTests
         Assert.Contains(log, l => l.Contains("ERROR"));
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ComputeLineages_CreatesGroupForSpouseParentSurname_WhenRootHasSpouseWithParents()
+    {
+        //Arrange — root + spouse with two parents of distinct surname
+        var rootId = Guid.NewGuid();
+        var spouseId = Guid.NewGuid();
+        var inLawFatherId = Guid.NewGuid();
+        var inLawMotherId = Guid.NewGuid();
+
+        var root = PersonFixtureFactory.Build(rootId, "Adam", "Kowalski", Sex.Male,
+            spouseIds: [spouseId], root: FakeRoot);
+
+        var spouse = PersonFixtureFactory.Build(spouseId, "Eva", "Kowalska", Sex.Female,
+            spouseIds: [rootId], parentIds: [inLawFatherId, inLawMotherId], root: FakeRoot);
+
+        var inLawFather = PersonFixtureFactory.Build(inLawFatherId, "Jan", "Wiśniewski", Sex.Male,
+            childrenIds: [spouseId], root: FakeRoot);
+
+        var inLawMother = PersonFixtureFactory.Build(inLawMotherId, "Anna", "Wiśniewska", Sex.Female,
+            childrenIds: [spouseId], root: FakeRoot);
+
+        var map = new Dictionary<Guid, MeFile>
+        {
+            [rootId] = root,
+            [spouseId] = spouse,
+            [inLawFatherId] = inLawFather,
+            [inLawMotherId] = inLawMother,
+        };
+
+        //Act
+        var (groups, _) = _sut.ComputeLineages(rootId, map);
+        var groupKeys = groups.Keys.ToHashSet();
+
+        //Assert — a lineage group for the Wiśniewski surname must exist
+        Assert.Contains(groupKeys, k => k.Contains("Wiśniewski"));
+    }
+
     #endregion
 
     #region Generate

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Moq;
 using Serilog;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
+using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Domain;
 using TreeManager.Core.Domain.Relationships;
 using TreeManager.Infrastructure.Persistence;
@@ -25,6 +27,7 @@ public class PersonRepositoryTests
 
     private readonly Mock<IFileSystemFacade> _fs;
     private readonly Mock<IMeFileProcessor> _processor;
+    private readonly Mock<IRelationshipFolderMirror> _mockFolderMirror;
     private readonly Mock<ILogger> _mockLogger;
     private readonly PersonRepository _sut;
 
@@ -32,8 +35,9 @@ public class PersonRepositoryTests
     {
         _fs = new Mock<IFileSystemFacade>();
         _processor = new Mock<IMeFileProcessor>();
+        _mockFolderMirror = new Mock<IRelationshipFolderMirror>();
         _mockLogger = new Mock<ILogger>();
-        _sut = new PersonRepository(_fs.Object, _processor.Object, _mockLogger.Object);
+        _sut = new PersonRepository(_fs.Object, _processor.Object, _mockFolderMirror.Object, _mockLogger.Object);
     }
 
     #region Create
@@ -142,6 +146,62 @@ public class PersonRepositoryTests
         //Assert
         _fs.Verify(x => x.CreateDirectory(PersonFolder), Times.Once());
         _processor.Verify(x => x.WriteMeFile(PersonMeJson, person), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Create_AppendsSuffix_WhenFolderNameAlreadyExists()
+    {
+        //Arrange
+        var person = BuildPerson("Jan Kowalski");
+        SetupEmptyScan();
+        _fs.Setup(x => x.DirectoryExists(PersonFolder)).Returns(true);
+        _fs.Setup(x => x.DirectoryExists(@"C:\fake\root\Lista osób\Jan Kowalski (2)")).Returns(false);
+
+        //Act
+        _sut.Create(person, RootPath);
+
+        //Assert
+        _fs.Verify(x => x.CreateDirectory(@"C:\fake\root\Lista osób\Jan Kowalski (2)"), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Create_WritesResolvedNameIntoMeFile_WhenDeduplicated()
+    {
+        //Arrange
+        var person = BuildPerson("Jan Kowalski");
+        SetupEmptyScan();
+        _fs.Setup(x => x.DirectoryExists(PersonFolder)).Returns(true);
+        _fs.Setup(x => x.DirectoryExists(@"C:\fake\root\Lista osób\Jan Kowalski (2)")).Returns(false);
+
+        //Act
+        _sut.Create(person, RootPath);
+
+        //Assert — me.json written with resolved PersonName
+        _processor.Verify(
+            x => x.WriteMeFile(
+                @"C:\fake\root\Lista osób\Jan Kowalski (2)\me.json",
+                It.Is<MeFile>(m => m.PersonName == "Jan Kowalski (2)")),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Create_DoesNotOverwrite_WhenSecondPersonHasSameName()
+    {
+        //Arrange
+        var person = BuildPerson("Jan Kowalski");
+        SetupEmptyScan();
+        _fs.Setup(x => x.DirectoryExists(PersonFolder)).Returns(true);
+        _fs.Setup(x => x.DirectoryExists(@"C:\fake\root\Lista osób\Jan Kowalski (2)")).Returns(false);
+
+        //Act
+        _sut.Create(person, RootPath);
+
+        //Assert — original folder never created/written; (2) folder used instead
+        _fs.Verify(x => x.CreateDirectory(PersonFolder), Times.Never());
+        _processor.Verify(x => x.WriteMeFile(PersonMeJson, It.IsAny<MeFile>()), Times.Never());
     }
 
     [Fact]

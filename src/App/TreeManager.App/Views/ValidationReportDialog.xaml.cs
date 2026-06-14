@@ -15,8 +15,8 @@ public partial class ValidationReportDialog : Window
         }
         else
         {
-            IssuesList.ItemsSource = messages;
-            IssuesList.Visibility = Visibility.Visible;
+            IssuesTextBox.Text = string.Join("\n", messages);
+            IssuesTextBox.Visibility = Visibility.Visible;
         }
     }
 }

@@ -4,76 +4,114 @@
         xmlns:vm="clr-namespace:TreeManager.App.ViewModels"
         xmlns:views="clr-namespace:TreeManager.App.Views"
         Title="{Binding WindowTitle}"
-        Height="700" Width="940" MinHeight="600" MinWidth="800"
+        Height="700" Width="1040" MinHeight="600" MinWidth="860"
         FontFamily="Segoe UI">
     <DockPanel>
 
-        <!-- Header bar -->
-        <Border DockPanel.Dock="Top" Background="#1565C0" Padding="22,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="TreeManager" FontSize="22" Foreground="White"
-                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"
-                           TextTrimming="CharacterEllipsis" MaxWidth="160"/>
-                <TextBlock Grid.Column="1"
-                           Text="{Binding CurrentMode, Converter={StaticResource ModeToLabelConverter}}"
-                           FontSize="15" Foreground="White" VerticalAlignment="Center"
-                           Margin="0,0,16,0" FontStyle="Italic"/>
-                <WrapPanel Grid.Column="2" VerticalAlignment="Center">
-                    <Button Content="Nowa osoba"
-                            Command="{Binding SwitchModeCommand}"
-                            CommandParameter="{x:Static vm:AppMode.Add}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Edytuj osobę z drzewa"
-                            Command="{Binding OpenPersonCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Zapisz osobę i dodaj do drzewa"
-                            Command="{Binding SaveCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Wczytaj szkic osoby"
-                            Command="{Binding LoadDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Zapisz osobę jako szkic"
-                            Command="{Binding SaveAsDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Zaktualizuj szkic osoby"
-                            Command="{Binding UpdateDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Dodaj szkic osoby do drzewa"
-                            Command="{Binding PromoteDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Wybierz osobę główną"
-                            Command="{Binding SetRootPersonCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Generuj Drzewo"
-                            Command="{Binding GenerateFolderTreeCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Generuj Rody"
-                            Command="{Binding GenerateLineageFoldersCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Sprawdź spójność"
-                            Command="{Binding ValidateTreeCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Zmień folder"
-                            Command="{Binding ChangeRootFolderCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                </WrapPanel>
-            </Grid>
-        </Border>
-
-        <!-- Auxiliary menu bar -->
-        <Menu DockPanel.Dock="Top" Background="#E3F2FD" BorderBrush="#BBDEFB" BorderThickness="0,1,0,1" Padding="8,2">
+        <!-- Narzędzia menu — top-most, above header -->
+        <Menu DockPanel.Dock="Top" Background="#E3F2FD" BorderBrush="#BBDEFB" BorderThickness="0,0,0,1" Padding="8,2">
             <MenuItem Header="Narzędzia">
+                <MenuItem Header="Zmień folder"
+                          Command="{Binding ChangeRootFolderCommand}"/>
                 <MenuItem Header="Otwórz folder z danymi"
                           Command="{Binding OpenDataFolderCommand}"/>
-                <MenuItem Header="Wyślij raport o błędzie"
-                          Command="{Binding SendTestReportCommand}"/>
             </MenuItem>
         </Menu>
+
+        <!-- Header bar — Option B layout -->
+        <Border DockPanel.Dock="Top" Background="#1565C0" Padding="10,10">
+            <DockPanel>
+
+                <!-- Mode box — left -->
+                <Border DockPanel.Dock="Left"
+                        Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}"
+                        CornerRadius="6" Padding="14,6" Margin="0,0,16,0"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentMode, Converter={StaticResource ModeToLabelConverter}}"
+                               FontSize="17" FontWeight="SemiBold"
+                               Foreground="#1A237E"
+                               VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Red report button — far right -->
+                <Button DockPanel.Dock="Right"
+                        Content="Wyślij raport o błędzie"
+                        Command="{Binding SendTestReportCommand}"
+                        Background="#D32F2F" Foreground="White"
+                        FontSize="14" Padding="14,8" Margin="8,0,0,0"
+                        VerticalAlignment="Center"/>
+
+                <!-- Three command groups -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <!-- OSOBA group -->
+                    <StackPanel Margin="0,0,18,0">
+                        <TextBlock Text="OSOBA" FontSize="11" Foreground="#90CAF9"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"
+                                   HorizontalAlignment="Center"/>
+                        <WrapPanel>
+                            <Button Content="Nowa osoba"
+                                    Command="{Binding SwitchModeCommand}"
+                                    CommandParameter="{x:Static vm:AppMode.Add}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Edytuj osobę z drzewa"
+                                    Command="{Binding OpenPersonCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Zapisz osobę i dodaj do drzewa"
+                                    Command="{Binding SaveNewPersonCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Zapisz zmiany dla osoby na drzewie"
+                                    Command="{Binding SaveTreeChangesCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <!-- SZKIC group -->
+                    <StackPanel Margin="0,0,18,0">
+                        <TextBlock Text="SZKIC" FontSize="11" Foreground="#90CAF9"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"
+                                   HorizontalAlignment="Center"/>
+                        <WrapPanel>
+                            <Button Content="Wczytaj szkic osoby"
+                                    Command="{Binding LoadDraftCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Zapisz osobę jako szkic"
+                                    Command="{Binding SaveAsDraftCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Zaktualizuj szkic osoby"
+                                    Command="{Binding UpdateDraftCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Dodaj szkic osoby do drzewa"
+                                    Command="{Binding PromoteDraftCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <!-- DRZEWO group -->
+                    <StackPanel>
+                        <TextBlock Text="DRZEWO" FontSize="11" Foreground="#90CAF9"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"
+                                   HorizontalAlignment="Center"/>
+                        <WrapPanel>
+                            <Button Content="Wybierz osobę główną"
+                                    Command="{Binding SetRootPersonCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Generuj Drzewo"
+                                    Command="{Binding GenerateFolderTreeCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Generuj Rody"
+                                    Command="{Binding GenerateLineageFoldersCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                            <Button Content="Sprawdź spójność"
+                                    Command="{Binding ValidateTreeCommand}"
+                                    FontSize="14" Margin="2,0" Padding="12,7"/>
+                        </WrapPanel>
+                    </StackPanel>
+
+                </StackPanel>
+
+            </DockPanel>
+        </Border>
 
         <!-- Status bar -->
         <Border DockPanel.Dock="Bottom" Background="#F5F5F5" BorderBrush="#E0E0E0"

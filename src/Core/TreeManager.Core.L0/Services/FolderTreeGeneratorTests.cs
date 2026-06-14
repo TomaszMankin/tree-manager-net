@@ -318,6 +318,34 @@ public class FolderTreeGeneratorTests
         Assert.Equal(expected, filenames);
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ComputeMembership_IncludesSpouseParents_WhenSpouseHasParents()
+    {
+        //Arrange — root + spouse; spouse has two parents
+        var rootId = Guid.NewGuid();
+        var spouseId = Guid.NewGuid();
+        var inLawFatherId = Guid.NewGuid();
+        var inLawMotherId = Guid.NewGuid();
+
+        var root = BuildMeFile(rootId, "Adam", "Kowalski", Sex.Male,
+            spouseIds: [spouseId]);
+        var spouse = BuildMeFile(spouseId, "Eva", "Nowak", Sex.Female,
+            parentIds: [inLawFatherId, inLawMotherId]);
+        var inLawFather = BuildMeFile(inLawFatherId, "Jan", "Nowak", Sex.Male);
+        var inLawMother = BuildMeFile(inLawMotherId, "Anna", "Nowak", Sex.Female);
+
+        var map = BuildMap(root, spouse, inLawFather, inLawMother);
+
+        //Act
+        var (members, _) = _sut.ComputeMembership(rootId, map);
+        var memberIds = members.Select(m => m.Uid).ToHashSet();
+
+        //Assert — both in-laws must be present
+        Assert.Contains(inLawFatherId, memberIds);
+        Assert.Contains(inLawMotherId, memberIds);
+    }
+
     #endregion
 
     #region Generate orchestration

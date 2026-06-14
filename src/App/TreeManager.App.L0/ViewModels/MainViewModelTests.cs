@@ -41,6 +41,7 @@ public class MainViewModelTests
     private readonly Mock<IInfoDialogService> _mockInfoDialog;
     private readonly Mock<IRootPickerService> _mockRootPickerService;
     private readonly Mock<ICrashReporter> _mockCrashReporter;
+    private readonly Mock<IUserJournalService> _mockJournal;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -67,6 +68,7 @@ public class MainViewModelTests
         _mockInfoDialog = new Mock<IInfoDialogService>();
         _mockRootPickerService = new Mock<IRootPickerService>();
         _mockCrashReporter = new Mock<ICrashReporter>();
+        _mockJournal = new Mock<IUserJournalService>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
@@ -149,7 +151,8 @@ public class MainViewModelTests
             validationDeps,
             _mockLog.Object,
             _mockRootPickerService.Object,
-            _mockCrashReporter.Object);
+            _mockCrashReporter.Object,
+            _mockJournal.Object);
     }
 
     #region SwitchMode
@@ -1644,13 +1647,13 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void SendTestReport_CallsCrashReporterReport_Always()
+    public void SendTestReport_InvokesReportManual_Always()
     {
         //Act
         _sut.SendTestReportCommand.Execute(null);
 
         //Assert
-        _mockCrashReporter.Verify(r => r.Report(It.IsAny<Exception>(), It.IsAny<string>()), Times.Once());
+        _mockCrashReporter.Verify(r => r.ReportManual(It.IsAny<string>()), Times.Once());
     }
 
     #endregion
@@ -2251,6 +2254,62 @@ public class MainViewModelTests
     #endregion
 
     #region S-013 ModeToLabelConverter header strings
+
+    #endregion
+
+    #region SaveNewPersonCommand / SaveTreeChangesCommand — CanExecute Theory (B-003)
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, true)]
+    [InlineData(AppMode.EditTree, false)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void SaveNewPersonCommand_CanExecute_TrueOnlyInAddMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Act
+        var result = _sut.SaveNewPersonCommand.CanExecute(null);
+
+        //Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, false)]
+    [InlineData(AppMode.EditTree, true)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void SaveTreeChangesCommand_CanExecute_TrueOnlyInEditTreeMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Act
+        var result = _sut.SaveTreeChangesCommand.CanExecute(null);
+
+        //Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveNewPersonCommand_LogsAction_WhenExecuted()
+    {
+        //Arrange — in Add mode, repository Create succeeds
+        _mockDirectoryService.Setup(x => x.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+
+        //Act
+        _sut.SaveNewPersonCommand.Execute(null);
+
+        //Assert
+        _mockJournal.Verify(
+            j => j.LogAction(
+                It.Is<string>(a => a.Contains("Zapisz osobę i dodaj do drzewa")),
+                It.IsAny<string>()),
+            Times.Once);
+    }
 
     #endregion
 

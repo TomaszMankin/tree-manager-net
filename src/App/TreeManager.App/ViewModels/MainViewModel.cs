@@ -4,6 +4,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Serilog;
+using TreeManager.App.Commands;
 using TreeManager.App.Mappers;
 using TreeManager.App.Services;
 using TreeManager.Core.Abstractions.Persistence;
@@ -51,9 +52,27 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly PersonEditDependencies _editDeps;
     private readonly FolderTreeCommandDependencies _folderTreeDeps;
     private readonly ValidationCommandDependencies _validationDeps;
+    private readonly IUserJournalService _journal;
     private readonly ILogger _log;
 
     private MeFile _originalSnapshot;
+
+    public IRelayCommand SwitchModeCommand { get; }
+    public IRelayCommand OpenPersonCommand { get; }
+    public IRelayCommand SaveCommand { get; }
+    public IRelayCommand SaveNewPersonCommand { get; }
+    public IRelayCommand SaveTreeChangesCommand { get; }
+    public IRelayCommand SaveAsDraftCommand { get; }
+    public IRelayCommand UpdateDraftCommand { get; }
+    public IRelayCommand LoadDraftCommand { get; }
+    public IRelayCommand PromoteDraftCommand { get; }
+    public IRelayCommand OpenDataFolderCommand { get; }
+    public IRelayCommand GenerateFolderTreeCommand { get; }
+    public IRelayCommand GenerateLineageFoldersCommand { get; }
+    public IRelayCommand ValidateTreeCommand { get; }
+    public IRelayCommand SetRootPersonCommand { get; }
+    public IRelayCommand ChangeRootFolderCommand { get; }
+    public IRelayCommand SendTestReportCommand { get; }
 
     public MainViewModel(
         PersonViewModel person,
@@ -67,7 +86,8 @@ public sealed partial class MainViewModel : ObservableObject
         ValidationCommandDependencies validationDeps,
         ILogger log,
         IRootPickerService rootPickerService,
-        ICrashReporter crashReporter)
+        ICrashReporter crashReporter,
+        IUserJournalService journal)
     {
         Person = person;
         Dates = dates;
@@ -80,7 +100,101 @@ public sealed partial class MainViewModel : ObservableObject
         _editDeps = editDeps;
         _folderTreeDeps = folderTreeDeps;
         _validationDeps = validationDeps;
+        _journal = journal;
         _log = log;
+
+        SwitchModeCommand = new JournalingRelayCommand(
+            inner: new RelayCommand<AppMode>(SwitchModeCore),
+            journal: _journal,
+            label: "Nowa osoba",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        OpenPersonCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(OpenPersonCore),
+            journal: _journal,
+            label: "Edytuj osobę z drzewa",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        SaveCommand = new RelayCommand(SaveCore, CanSave);
+
+        SaveNewPersonCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(SaveCore, () => CurrentMode == AppMode.Add),
+            journal: _journal,
+            label: "Zapisz osobę i dodaj do drzewa",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        SaveTreeChangesCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(SaveCore, () => CurrentMode == AppMode.EditTree),
+            journal: _journal,
+            label: "Zapisz zmiany dla osoby na drzewie",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        SaveAsDraftCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(SaveAsDraftCore, CanSaveAsDraft),
+            journal: _journal,
+            label: "Zapisz osobę jako szkic",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        UpdateDraftCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(UpdateDraftCore, CanUpdateDraft),
+            journal: _journal,
+            label: "Zaktualizuj szkic osoby",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        LoadDraftCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(LoadDraftCore),
+            journal: _journal,
+            label: "Wczytaj szkic osoby",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        PromoteDraftCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(PromoteDraftCore, CanPromoteDraft),
+            journal: _journal,
+            label: "Dodaj szkic osoby do drzewa",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        OpenDataFolderCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(OpenDataFolderCore),
+            journal: _journal,
+            label: "Otwórz folder z danymi",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        GenerateFolderTreeCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(GenerateFolderTreeCore),
+            journal: _journal,
+            label: "Generuj Drzewo",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        GenerateLineageFoldersCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(GenerateLineageFoldersCore),
+            journal: _journal,
+            label: "Generuj Rody",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        ValidateTreeCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(ValidateTreeCore),
+            journal: _journal,
+            label: "Sprawdź spójność",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        SetRootPersonCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(SetRootPersonCore),
+            journal: _journal,
+            label: "Wybierz osobę główną",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        ChangeRootFolderCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(ChangeRootFolderCore),
+            journal: _journal,
+            label: "Zmień folder",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
+        SendTestReportCommand = new JournalingRelayCommand(
+            inner: new RelayCommand(SendTestReportCore),
+            journal: _journal,
+            label: "Wyślij raport o błędzie",
+            personLabelProvider: () => Family.LoadedPersonId?.ToString() ?? "-");
+
         ResetToBlank();
     }
 
@@ -102,14 +216,15 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnCurrentModeChanged(AppMode value)
     {
         WindowTitle = BuildWindowTitle(value);
-        PromoteDraftCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        SaveNewPersonCommand.NotifyCanExecuteChanged();
+        SaveTreeChangesCommand.NotifyCanExecuteChanged();
         SaveAsDraftCommand.NotifyCanExecuteChanged();
         UpdateDraftCommand.NotifyCanExecuteChanged();
+        PromoteDraftCommand.NotifyCanExecuteChanged();
     }
 
-    [RelayCommand]
-    private void SwitchMode(AppMode targetMode)
+    private void SwitchModeCore(AppMode targetMode)
     {
         if (targetMode == CurrentMode)
         {
@@ -139,8 +254,7 @@ public sealed partial class MainViewModel : ObservableObject
         CurrentMode = targetMode;
     }
 
-    [RelayCommand]
-    private void OpenPerson()
+    private void OpenPersonCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -181,8 +295,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private void Save()
+    private void SaveCore()
     {
         StatusMessage = string.Empty;
         IsBusy = true;
@@ -258,8 +371,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanSave() => CurrentMode == AppMode.Add || CurrentMode == AppMode.EditTree;
 
-    [RelayCommand(CanExecute = nameof(CanSaveAsDraft))]
-    private void SaveAsDraft()
+    private void SaveAsDraftCore()
     {
         StatusMessage = string.Empty;
         var rootPath = _rootPointerStore.Read();
@@ -291,8 +403,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanSaveAsDraft() => CurrentMode == AppMode.Add;
 
-    [RelayCommand(CanExecute = nameof(CanUpdateDraft))]
-    private void UpdateDraft()
+    private void UpdateDraftCore()
     {
         StatusMessage = string.Empty;
         var rootPath = _rootPointerStore.Read();
@@ -323,8 +434,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanUpdateDraft() => CurrentMode == AppMode.EditDraft;
 
-    [RelayCommand]
-    private void LoadDraft()
+    private void LoadDraftCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -371,8 +481,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanPromoteDraft))]
-    private void PromoteDraft()
+    private void PromoteDraftCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -414,8 +523,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanPromoteDraft() => CurrentMode == AppMode.EditDraft;
 
-    [RelayCommand]
-    private void OpenDataFolder()
+    private void OpenDataFolderCore()
     {
         try
         {
@@ -435,8 +543,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void GenerateFolderTree()
+    private void GenerateFolderTreeCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -475,8 +582,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void GenerateLineageFolders()
+    private void GenerateLineageFoldersCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -522,8 +628,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void ValidateTree()
+    private void ValidateTreeCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -547,8 +652,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void SetRootPerson()
+    private void SetRootPersonCore()
     {
         var rootPath = _rootPointerStore.Read();
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -570,8 +674,7 @@ public sealed partial class MainViewModel : ObservableObject
         StatusMessage = string.Format(SetRootPersonSuccessTemplate, selected.DisplayName);
     }
 
-    [RelayCommand]
-    private void ChangeRootFolder()
+    private void ChangeRootFolderCore()
     {
         var newRoot = _rootPickerService.PickRoot();
         if (string.IsNullOrWhiteSpace(newRoot))
@@ -585,10 +688,9 @@ public sealed partial class MainViewModel : ObservableObject
         StatusMessage = ChangeRootFolderSuccessMessage;
     }
 
-    [RelayCommand]
-    private void SendTestReport()
+    private void SendTestReportCore()
     {
-        _crashReporter.Report(new InvalidOperationException("Ręczny raport z aplikacji."), "ManualReport");
+        _crashReporter.ReportManual("Ręczny raport z aplikacji.");
     }
 
     private void ResetToBlank()

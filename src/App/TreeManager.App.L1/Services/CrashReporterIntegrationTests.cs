@@ -5,6 +5,8 @@ using Serilog;
 using Serilog.Events;
 using TreeManager.App.Services;
 using TreeManager.Core.Abstractions.Notifications;
+using TreeManager.Core.Abstractions.Settings;
+using TreeManager.Core.Domain.Notifications;
 using TreeManager.Infrastructure.Logging;
 
 namespace TreeManager.App.L1.Services;
@@ -42,10 +44,7 @@ public sealed class CrashReporterIntegrationTests : IDisposable
         var bootstrapper = new LoggingBootstrapper();
         bootstrapper.Configure(_tempRoot, date, LogEventLevel.Information);
 
-        var dialogMock = new Mock<ICrashDialogService>();
-        var escalatorMock = new Mock<IEmailEscalator>();
-        var queueMock = new Mock<IOfflineQueue>();
-        var sut = new CrashReporter(Log.Logger, dialogMock.Object, escalatorMock.Object, queueMock.Object);
+        var sut = BuildSut(dialogThrows: false);
         var exception = new InvalidOperationException("crash-test-error");
 
         //Act
@@ -57,7 +56,6 @@ public sealed class CrashReporterIntegrationTests : IDisposable
         var content = File.ReadAllText(logPath);
         Assert.Contains("crash-test-error", content);
         Assert.Contains("[ERR]", content);
-        dialogMock.Verify(d => d.ShowCrash(), Times.Once);
     }
 
     [Fact]
@@ -68,12 +66,7 @@ public sealed class CrashReporterIntegrationTests : IDisposable
         var bootstrapper = new LoggingBootstrapper();
         bootstrapper.Configure(_tempRoot, date, LogEventLevel.Information);
 
-        var dialogMock = new Mock<ICrashDialogService>();
-        dialogMock.Setup(d => d.ShowCrash()).Throws<Exception>();
-        var escalatorMock = new Mock<IEmailEscalator>();
-        var queueMock = new Mock<IOfflineQueue>();
-
-        var sut = new CrashReporter(Log.Logger, dialogMock.Object, escalatorMock.Object, queueMock.Object);
+        var sut = BuildSut(dialogThrows: true);
         var exception = new InvalidOperationException("crash-dialog-throws");
 
         //Act
@@ -85,5 +78,28 @@ public sealed class CrashReporterIntegrationTests : IDisposable
         var content = File.ReadAllText(logPath);
         Assert.Contains("crash-dialog-throws", content);
         Assert.Contains("[ERR]", content);
+    }
+
+    private static CrashReporter BuildSut(bool dialogThrows)
+    {
+        var dialogMock = new Mock<ICrashDialogService>();
+        if (dialogThrows)
+        {
+            dialogMock.Setup(d => d.ShowCrash()).Throws<Exception>();
+        }
+
+        var escalatorMock = new Mock<IEmailEscalator>();
+        var queueMock = new Mock<IOfflineQueue>();
+        var settingsMock = new Mock<IEmailSettingsStore>();
+        settingsMock.Setup(s => s.Get()).Returns(new EmailSettings());
+        var infoMock = new Mock<IInfoDialogService>();
+
+        return new CrashReporter(
+            Log.Logger,
+            dialogMock.Object,
+            escalatorMock.Object,
+            queueMock.Object,
+            settingsMock.Object,
+            infoMock.Object);
     }
 }

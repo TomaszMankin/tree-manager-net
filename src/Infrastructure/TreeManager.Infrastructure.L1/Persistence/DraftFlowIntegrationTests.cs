@@ -7,6 +7,7 @@ using TreeManager.Core.Domain;
 using TreeManager.Core.Services;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
+using TreeManager.Infrastructure.Shell;
 
 namespace TreeManager.Infrastructure.L1.Persistence;
 
@@ -26,7 +27,9 @@ public class DraftFlowIntegrationTests : IDisposable
 
         _fs = new FileSystemFacade();
         _processor = new MeFileProcessor(_fs);
-        _personRepo = new PersonRepository(_fs, _processor, Serilog.Log.Logger);
+        var shortcutCreator = new ShellLinkShortcutCreator(Serilog.Log.Logger);
+        var folderMirror = new RelationshipFolderMirror(_fs, shortcutCreator, Serilog.Log.Logger);
+        _personRepo = new PersonRepository(_fs, _processor, folderMirror, Serilog.Log.Logger);
         _draftRepo = new DraftRepository(_fs, _processor, Serilog.Log.Logger);
         _sut = new DraftPromoter(_personRepo, _draftRepo, _fs, Serilog.Log.Logger);
     }

@@ -87,16 +87,17 @@ public sealed record MeFile
     [JsonPropertyName("dates_of_death")]
     public string DatesOfDeath { get; init; } = string.Empty;
 
-    // Location is a derived machine-local path applied at save time only;
-    // excluding it prevents false-positive dirty detection when comparing
-    // a loaded snapshot (which carries Location) against a freshly assembled state.
+    // Location and PersonName are derived fields excluded from equality.
+    // Location is a machine-local path applied at save time; PersonName is
+    // recomputed from the name fields at each save and may diverge from the
+    // on-disk value after folder deduplication. Both fields are already
+    // captured by the fields they are derived from.
     public bool Equals(MeFile other)
     {
         if (other is null) { return false; }
         if (ReferenceEquals(this, other)) { return true; }
 
         return UniqueIdentifier == other.UniqueIdentifier
-            && PersonName == other.PersonName
             && FirstName == other.FirstName
             && OtherFirstNames == other.OtherFirstNames
             && LastName == other.LastName
@@ -122,7 +123,6 @@ public sealed record MeFile
     {
         var hash = new HashCode();
         hash.Add(UniqueIdentifier);
-        hash.Add(PersonName);
         hash.Add(FirstName);
         hash.Add(OtherFirstNames);
         hash.Add(LastName);

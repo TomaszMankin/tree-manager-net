@@ -19,6 +19,7 @@ public static class PersonFixtureFactory
         List<Guid> spouseIds = null,
         List<Guid> parentIds = null,
         List<Guid> childrenIds = null,
+        List<Guid> siblingIds = null,
         bool hasMaidenName = false,
         string maidenName = "",
         string root = DefaultRoot)
@@ -35,6 +36,7 @@ public static class PersonFixtureFactory
             SpouseId = spouseIds ?? [],
             ParentsId = parentIds ?? [],
             ChildrenId = childrenIds ?? [],
+            SiblingsId = siblingIds ?? [],
         };
     }
 

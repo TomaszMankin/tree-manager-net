@@ -163,6 +163,29 @@ public sealed class TreeConsistencyValidator : ITreeConsistencyValidator
                 }
             }
 
+            // Check child direction: person claims a child who doesn't list person as parent
+            foreach (var childId in person.ChildrenId)
+            {
+                if (childId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                if (!people.TryGetValue(childId, out var child))
+                {
+                    continue;
+                }
+
+                if (!child.ParentsId.Contains(personId))
+                {
+                    issues.Add(new ValidationIssue
+                    {
+                        Kind = ValidationIssueKind.OneSidedRelationship,
+                        Subjects = [personId, childId],
+                    });
+                }
+            }
+
             // Check spouse direction: person claims a spouse who doesn't reciprocate
             foreach (var spouseId in person.SpouseId)
             {
@@ -185,6 +208,29 @@ public sealed class TreeConsistencyValidator : ITreeConsistencyValidator
                     });
                 }
             }
+
+            // Check sibling direction: person claims a sibling who doesn't reciprocate
+            foreach (var siblingId in person.SiblingsId)
+            {
+                if (siblingId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                if (!people.TryGetValue(siblingId, out var sibling))
+                {
+                    continue;
+                }
+
+                if (!sibling.SiblingsId.Contains(personId))
+                {
+                    issues.Add(new ValidationIssue
+                    {
+                        Kind = ValidationIssueKind.OneSidedRelationship,
+                        Subjects = [personId, siblingId],
+                    });
+                }
+            }
         }
 
         return issues;
@@ -199,8 +245,9 @@ public sealed class TreeConsistencyValidator : ITreeConsistencyValidator
             var hasParent = person.ParentsId.Any(id => id != Guid.Empty);
             var hasChild = person.ChildrenId.Any(id => id != Guid.Empty);
             var hasSpouse = person.SpouseId.Any(id => id != Guid.Empty);
+            var hasSibling = person.SiblingsId.Any(id => id != Guid.Empty);
 
-            if (!hasParent && !hasChild && !hasSpouse)
+            if (!hasParent && !hasChild && !hasSpouse && !hasSibling)
             {
                 issues.Add(new ValidationIssue
                 {
@@ -218,5 +265,6 @@ public sealed class TreeConsistencyValidator : ITreeConsistencyValidator
         foreach (var id in person.ParentsId) { yield return id; }
         foreach (var id in person.ChildrenId) { yield return id; }
         foreach (var id in person.SpouseId) { yield return id; }
+        foreach (var id in person.SiblingsId) { yield return id; }
     }
 }

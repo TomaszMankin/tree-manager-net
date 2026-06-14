@@ -181,6 +181,7 @@ public partial class App : Application
         services.AddSingleton<IFolderRevealService, FolderRevealService>();
         services.AddSingleton<IInfoDialogService, InfoDialogService>();
         services.AddSingleton<PersonEditDependencies>();
+        services.AddSingleton<IRelationshipFolderMirror, RelationshipFolderMirror>();
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
         services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
         services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
@@ -210,6 +211,7 @@ public partial class App : Application
 
         services.AddSingleton<IQueueRetryService, QueueRetryService>();
         services.AddSingleton<ICrashReporter, CrashReporter>();
+        services.AddSingleton<IUserJournalService, UserJournalService>();
         services.AddSingleton<IUpdateService, VelopackUpdateService>();
         services.AddSingleton<IUpdatePromptService, UpdatePromptService>();
         services.AddSingleton<UpdateCoordinator>();

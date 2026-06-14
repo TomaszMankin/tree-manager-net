@@ -12,8 +12,10 @@ using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Abstractions.Settings;
 using TreeManager.Core.Abstractions.Validation;
 using TreeManager.Core.Domain;
+using TreeManager.Core.Services;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
+using TreeManager.Infrastructure.Shell;
 
 namespace TreeManager.App.L1.ViewModels;
 
@@ -37,7 +39,9 @@ public sealed class MainViewModelBidirSaveIntegrationTests : IDisposable
 
         var fs = new FileSystemFacade();
         var processor = new MeFileProcessor(fs);
-        var personRepo = new PersonRepository(fs, processor, Log.Logger);
+        var shortcutCreator = new ShellLinkShortcutCreator(Log.Logger);
+        var folderMirror = new RelationshipFolderMirror(fs, shortcutCreator, Log.Logger);
+        var personRepo = new PersonRepository(fs, processor, folderMirror, Log.Logger);
         var directoryService = new PersonDirectoryService(processor);
         var loaderService = new PersonLoaderService(processor, directoryService);
 
@@ -99,7 +103,8 @@ public sealed class MainViewModelBidirSaveIntegrationTests : IDisposable
             validationDeps,
             Log.Logger,
             new Mock<IRootPickerService>().Object,
-            new Mock<ICrashReporter>().Object);
+            new Mock<ICrashReporter>().Object,
+            new Mock<IUserJournalService>().Object);
     }
 
     #region S-001 bidirectional save

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Persistence;
+using TreeManager.Core.Abstractions.Services;
 using TreeManager.Core.Domain;
 using TreeManager.Core.Domain.Relationships;
 using TreeManager.Core.Services;
@@ -16,15 +17,22 @@ public sealed class PersonRepository : IPersonRepository
 
     private readonly IFileSystemFacade _fs;
     private readonly IMeFileProcessor _processor;
+    private readonly IRelationshipFolderMirror _folderMirror;
     private readonly ILogger _log;
 
-    public PersonRepository(IFileSystemFacade fs, IMeFileProcessor processor, ILogger log)
+    public PersonRepository(
+        IFileSystemFacade fs,
+        IMeFileProcessor processor,
+        IRelationshipFolderMirror folderMirror,
+        ILogger log)
     {
         ArgumentNullException.ThrowIfNull(fs);
         ArgumentNullException.ThrowIfNull(processor);
+        ArgumentNullException.ThrowIfNull(folderMirror);
         ArgumentNullException.ThrowIfNull(log);
         _fs = fs;
         _processor = processor;
+        _folderMirror = folderMirror;
         _log = log;
     }
 
@@ -47,12 +55,31 @@ public sealed class PersonRepository : IPersonRepository
 
         var index = BuildIndex(rootPath);
 
+        // 1. Compute delta before applying (needed for folder mirror)
+        var addedParents = person.ParentsId.Except(originalSnapshot.ParentsId).ToList();
+        var removedParents = originalSnapshot.ParentsId.Except(person.ParentsId).ToList();
+        var addedChildren = person.ChildrenId.Except(originalSnapshot.ChildrenId).ToList();
+        var removedChildren = originalSnapshot.ChildrenId.Except(person.ChildrenId).ToList();
+        var addedSpouses = person.SpouseId.Except(originalSnapshot.SpouseId).ToList();
+        var removedSpouses = originalSnapshot.SpouseId.Except(person.SpouseId).ToList();
+        var addedSiblings = person.SiblingsId.Except(originalSnapshot.SiblingsId).ToList();
+        var removedSiblings = originalSnapshot.SiblingsId.Except(person.SiblingsId).ToList();
+
         ApplyDeltaSync(person, originalSnapshot, index);
 
         if (person.PersonName != originalSnapshot.PersonName)
         {
             PropagateNameChange(person, index);
         }
+
+        // 2. Mirror relationship folders for delta changes
+        var folderIndex = BuildFolderIndex(index);
+        _folderMirror.ApplyDelta(
+            person, personFolderPath, folderIndex,
+            addedParents, removedParents,
+            addedChildren, removedChildren,
+            addedSpouses, removedSpouses,
+            addedSiblings, removedSiblings);
     }
 
     private void PropagateNameChange(MeFile person, IReadOnlyDictionary<Guid, string> uuidToPath)
@@ -179,10 +206,17 @@ public sealed class PersonRepository : IPersonRepository
             return;
         }
 
-        Create(person, rootPath, person.PersonName);
+        var resolvedName = DeduplicateFolderName(person.PersonName, rootPath);
+        var resolvedPerson = person with
+        {
+            PersonName = resolvedName,
+            Location = Path.Combine(rootPath, PeopleListFolderName, resolvedName),
+        };
+
+        Create(resolvedPerson, rootPath, resolvedName);
     }
 
-    public void Create(MeFile person, string rootPath, string folderName)
+    public string Create(MeFile person, string rootPath, string folderName)
     {
         ArgumentNullException.ThrowIfNull(person);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
@@ -195,6 +229,27 @@ public sealed class PersonRepository : IPersonRepository
         _processor.WriteMeFile(meFilePath, person);
 
         ApplyBidirSync(person, rootPath);
+
+        var index = BuildIndex(rootPath);
+        var folderIndex = BuildFolderIndex(index);
+        _folderMirror.Mirror(person, personFolderPath, folderIndex);
+
+        return folderName;
+    }
+
+    private string DeduplicateFolderName(string baseName, string rootPath)
+    {
+        var candidate = baseName;
+        var parentDir = Path.Combine(rootPath, PeopleListFolderName);
+        int suffix = 2;
+
+        while (_fs.DirectoryExists(Path.Combine(parentDir, candidate)))
+        {
+            candidate = $"{baseName} ({suffix})";
+            suffix++;
+        }
+
+        return candidate;
     }
 
     private void ApplyBidirSync(MeFile person, string rootPath)
@@ -205,6 +260,16 @@ public sealed class PersonRepository : IPersonRepository
         SyncList(person.ChildrenId, person.UniqueIdentifier, person.PersonName, RelationshipRole.IsParentOf, index);
         SyncList(person.SpouseId, person.UniqueIdentifier, person.PersonName, RelationshipRole.IsSpouseOf, index);
         SyncList(person.SiblingsId, person.UniqueIdentifier, person.PersonName, RelationshipRole.IsSiblingOf, index);
+    }
+
+    private static IReadOnlyDictionary<Guid, string> BuildFolderIndex(Dictionary<Guid, string> meFileIndex)
+    {
+        var folderIndex = new Dictionary<Guid, string>(meFileIndex.Count);
+        foreach (var (uid, meFilePath) in meFileIndex)
+        {
+            folderIndex[uid] = Path.GetDirectoryName(meFilePath) ?? string.Empty;
+        }
+        return folderIndex;
     }
 
     private Dictionary<Guid, string> BuildIndex(string rootPath)
