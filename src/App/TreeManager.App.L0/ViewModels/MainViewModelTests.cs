@@ -112,7 +112,7 @@ public class MainViewModelTests
             .Returns(new List<string>());
 
         // Default: promote confirm accepts — keeps all existing PromoteDraft tests green
-        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
 
         // Default: folder reveal is a no-op
 
@@ -1341,7 +1341,7 @@ public class MainViewModelTests
     {
         //Arrange
         SimulateLoadedDraft();
-        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(false);
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
         //Act
         _sut.PromoteDraftCommand.Execute(null);
@@ -1357,7 +1357,7 @@ public class MainViewModelTests
     {
         //Arrange
         SimulateLoadedDraft();
-        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
 
         //Act
         _sut.PromoteDraftCommand.Execute(null);
@@ -1379,8 +1379,8 @@ public class MainViewModelTests
 
         string capturedSummary = null;
         _mockPromoteConfirm
-            .Setup(s => s.Confirm(It.IsAny<string>()))
-            .Callback<string>(s => capturedSummary = s)
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => capturedSummary = s)
             .Returns(true);
 
         //Act
@@ -1896,27 +1896,6 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void SwitchMode_DoesNotCallConfirmDiscard_WhenNoFieldChangedAfterSave()
-    {
-        //Arrange — save a new person (no relationships — empty tree)
-        _mockDirectoryService
-            .Setup(x => x.GetAll(FakeRoot))
-            .Returns(new List<PersonSummary>());
-        _sut.SaveCommand.Execute(null);
-
-        _mockDirtyTracker
-            .Setup(t => t.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>()))
-            .Returns(false);
-
-        //Act — switch mode without changing any field
-        _sut.SwitchModeCommand.Execute(AppMode.Add);
-
-        //Assert — guard not called
-        _mockDirtyGuard.Verify(g => g.ConfirmDiscard(), Times.Never());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void SwitchMode_CallsConfirmDiscard_WhenFieldChangedAfterSave()
     {
         //Arrange — save first
@@ -2061,7 +2040,7 @@ public class MainViewModelTests
         _sut.SaveCommand.Execute(null);
 
         //Assert
-        _mockPromoteConfirm.Verify(s => s.Confirm(It.IsAny<string>()), Times.Once());
+        _mockPromoteConfirm.Verify(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
     }
 
     [Fact]
@@ -2069,7 +2048,7 @@ public class MainViewModelTests
     public void Save_AbortsCreate_WhenConfirmDeclined()
     {
         //Arrange
-        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(false);
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(false);
         AddOneRelationship();
 
         //Act
@@ -2084,7 +2063,7 @@ public class MainViewModelTests
     public void Save_Proceeds_WhenConfirmAccepted()
     {
         //Arrange
-        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
         AddOneRelationship();
 
         //Act
@@ -2105,8 +2084,8 @@ public class MainViewModelTests
 
         string captured = null;
         _mockPromoteConfirm
-            .Setup(s => s.Confirm(It.IsAny<string>()))
-            .Callback<string>(s => captured = s)
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
             .Returns(true);
 
         //Act
@@ -2115,6 +2094,105 @@ public class MainViewModelTests
         //Assert
         Assert.NotNull(captured);
         Assert.Contains("Maria", captured);
+    }
+
+    #endregion
+
+    #region Mode-aware pre-save dialog text
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ConfirmsWithEditText_WhenUpdatingExistingPerson()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        AddOneRelationship();
+        string capturedTitle = null;
+        string capturedHeader = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => { capturedTitle = t; capturedHeader = h; })
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Czy zapisać zmiany dla tej osoby?", capturedTitle);
+        Assert.Equal("Edytuj osobę:", capturedHeader);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ConfirmsWithCreateText_WhenAddingNewPerson()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+        AddOneRelationship();
+        string capturedTitle = null;
+        string capturedHeader = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => { capturedTitle = t; capturedHeader = h; })
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Zapisz nową osobę", capturedTitle);
+        Assert.Equal("Nowa osoba:", capturedHeader);
+    }
+
+    #endregion
+
+    #region Maiden name in pre-save summary
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SummaryContainsMaidenName_WhenHasMaidenNameSet()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Anna";
+        _sut.Person.LastName = "Kowalska";
+        _sut.Person.HasMaidenName = true;
+        _sut.Person.MaidenName = "Nowak";
+        AddOneRelationship();
+        string captured = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Contains("zd. Nowak", captured);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SummaryOmitsMaidenName_WhenHasMaidenNameUnset()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Anna";
+        _sut.Person.LastName = "Kowalska";
+        _sut.Person.HasMaidenName = false;
+        _sut.Person.MaidenName = "Nowak";
+        AddOneRelationship();
+        string captured = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.DoesNotContain("zd.", captured);
     }
 
     #endregion

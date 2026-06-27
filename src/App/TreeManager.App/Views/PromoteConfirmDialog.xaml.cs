@@ -4,9 +4,11 @@ namespace TreeManager.App.Views;
 
 public partial class PromoteConfirmDialog : Window
 {
-    public PromoteConfirmDialog(string summary)
+    public PromoteConfirmDialog(string summary, string title, string header)
     {
         InitializeComponent();
+        Title = title;
+        HeaderBlock.Text = header;
         SummaryBlock.Text = summary;
     }
 

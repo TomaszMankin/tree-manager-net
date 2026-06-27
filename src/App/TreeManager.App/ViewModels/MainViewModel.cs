@@ -39,6 +39,13 @@ public sealed partial class MainViewModel : ObservableObject
     private const string GenerateTreeDialogTitle = "Generowanie drzewa";
     private const string GenerateLineageDialogTitle = "Generowanie rodów";
     private const string MinRelationshipMessage = "Osoba musi mieć przynajmniej jedną relację.";
+    private const string SaveCreateDialogTitle = "Zapisz nową osobę";
+    private const string SaveCreateDialogHeader = "Nowa osoba:";
+    private const string SaveUpdateDialogTitle = "Czy zapisać zmiany dla tej osoby?";
+    private const string SaveUpdateDialogHeader = "Edytuj osobę:";
+    private const string PromoteDialogTitle = "Przenieś do drzewa";
+    private const string PromoteDialogHeader = "Czy przenieść tę osobę do drzewa?";
+    private const string MaidenNamePrefix = "zd.";
 
     public PersonViewModel Person { get; }
     public DatesTabViewModel Dates { get; }
@@ -231,16 +238,9 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var rootPath = _rootPointerStore.Read();
-        var current = string.IsNullOrWhiteSpace(rootPath)
-            ? AssembleCurrentMeFile()
-            : ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
-        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
+        if (!CheckDirtyAndConfirm())
         {
-            if (!_editDeps.DirtyGuard.ConfirmDiscard())
-            {
-                return;
-            }
+            return;
         }
 
         if (targetMode == AppMode.Add)
@@ -271,13 +271,9 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var currentSnapshot = ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
-        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, currentSnapshot))
+        if (!CheckDirtyAndConfirm())
         {
-            if (!_editDeps.DirtyGuard.ConfirmDiscard())
-            {
-                return;
-            }
+            return;
         }
 
         try
@@ -329,18 +325,23 @@ public sealed partial class MainViewModel : ObservableObject
             var meFile = AssembleCurrentMeFile();
             meFile = ApplyIdentityOverlay(meFile, rootPath);
 
+            var isCreate = _originalSnapshot == null;
+
             // 2. Pre-save confirm
             var summary = BuildSaveSummary(meFile);
-            if (!_editDeps.PromoteConfirmService.Confirm(summary))
+            var title = isCreate ? SaveCreateDialogTitle : SaveUpdateDialogTitle;
+            var header = isCreate ? SaveCreateDialogHeader : SaveUpdateDialogHeader;
+            if (!_editDeps.PromoteConfirmService.Confirm(summary, title, header))
             {
                 return;
             }
 
-            if (_originalSnapshot == null)
+            if (isCreate)
             {
                 // 3. Create new person
                 _personRepository.Create(meFile, rootPath);
                 _originalSnapshot = meFile;
+                SyncPersonIdentity(meFile);
                 CurrentMode = AppMode.EditTree;
                 WindowTitle = BuildWindowTitle(AppMode.EditTree, Person.ToFolderName());
             }
@@ -389,6 +390,7 @@ public sealed partial class MainViewModel : ObservableObject
 
             _editDeps.DraftRepository.SaveDraft(meFile, rootPath);
             _originalSnapshot = meFile;
+            SyncPersonIdentity(meFile);
             ErrorMessage = string.Empty;
             StatusMessage = SaveDraftSuccessMessage;
             CurrentMode = AppMode.EditDraft;
@@ -421,6 +423,7 @@ public sealed partial class MainViewModel : ObservableObject
 
             _editDeps.DraftRepository.SaveDraft(meFile, rootPath);
             _originalSnapshot = meFile;
+            SyncPersonIdentity(meFile);
             ErrorMessage = string.Empty;
             StatusMessage = SaveDraftSuccessMessage;
             _editDeps.InfoDialog.Show(UpdateDraftDialogTitle, SaveDraftSuccessMessage);
@@ -444,13 +447,9 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var current = ApplyIdentityOverlay(AssembleCurrentMeFile(), rootPath);
-        if (_editDeps.DirtyTracker.IsDirty(_originalSnapshot, current))
+        if (!CheckDirtyAndConfirm())
         {
-            if (!_editDeps.DirtyGuard.ConfirmDiscard())
-            {
-                return;
-            }
+            return;
         }
 
         var drafts = _editDeps.DraftRepository.GetAllDrafts(rootPath);
@@ -502,7 +501,7 @@ public sealed partial class MainViewModel : ObservableObject
             meFile = ApplyIdentityOverlay(meFile, rootPath);
 
             var summary = BuildPromoteSummary(meFile);
-            if (!_editDeps.PromoteConfirmService.Confirm(summary))
+            if (!_editDeps.PromoteConfirmService.Confirm(summary, PromoteDialogTitle, PromoteDialogHeader))
             {
                 return;
             }
@@ -510,6 +509,7 @@ public sealed partial class MainViewModel : ObservableObject
             _editDeps.DraftPromoter.Promote(meFile, rootPath);
 
             _originalSnapshot = meFile;
+            SyncPersonIdentity(meFile);
             Family.LoadedPersonId = meFile.UniqueIdentifier;
             CurrentMode = AppMode.EditTree;
             ErrorMessage = string.Empty;
@@ -729,6 +729,28 @@ public sealed partial class MainViewModel : ObservableObject
         return map;
     }
 
+    private bool CheckDirtyAndConfirm()
+    {
+        var snapshot = _originalSnapshot;
+        var current = AssembleCurrentMeFile();
+        var isDirty = _editDeps.DirtyTracker.IsDirty(snapshot, current);
+
+        _log.Debug(
+            "Dirty check: snapshotHash={SnapshotHash} currentHash={CurrentHash} isDirty={IsDirty} snapshotUid={SnapshotUid} currentUid={CurrentUid}",
+            snapshot?.GetHashCode(),
+            current.GetHashCode(),
+            isDirty,
+            snapshot?.UniqueIdentifier,
+            current.UniqueIdentifier);
+
+        if (isDirty && !_editDeps.DirtyGuard.ConfirmDiscard())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     private MeFile AssembleCurrentMeFile()
     {
         var meFile = Person.ToMeFile();
@@ -736,6 +758,13 @@ public sealed partial class MainViewModel : ObservableObject
         meFile = Family.ToMeFile(meFile);
         meFile = Notes.ToMeFile(meFile);
         return meFile;
+    }
+
+    private void SyncPersonIdentity(MeFile meFile)
+    {
+        Person.UniqueIdentifier = meFile.UniqueIdentifier;
+        Person.PersonName = meFile.PersonName;
+        Person.Location = meFile.Location;
     }
 
     private MeFile ApplyIdentityOverlay(MeFile meFile, string rootPath)
@@ -769,7 +798,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static string BuildPromoteSummary(MeFile meFile)
     {
-        return $"Imię i nazwisko: {meFile.FirstName} {meFile.LastName}\n"
+        return $"Imię i nazwisko: {FormatDisplayName(meFile)}\n"
              + $"Data urodzenia: {meFile.DatesOfBirth}\n"
              + $"Rodzice: {meFile.ParentsId.Count}\n"
              + $"Małżonkowie: {meFile.SpouseId.Count}\n"
@@ -778,9 +807,17 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static string BuildSaveSummary(MeFile meFile)
     {
-        return $"Nowa osoba:\n{meFile.FirstName} {meFile.LastName}\n"
+        return $"{FormatDisplayName(meFile)}\n"
              + $"Rodzice: {meFile.ParentsId.Count}\n"
              + $"Małżonkowie: {meFile.SpouseId.Count}\n"
              + $"Dzieci: {meFile.ChildrenId.Count}\n\nZapisać?";
+    }
+
+    private static string FormatDisplayName(MeFile meFile)
+    {
+        var baseName = $"{meFile.FirstName} {meFile.LastName}";
+        return meFile.HasMaidenName && !string.IsNullOrWhiteSpace(meFile.MaidenName)
+            ? $"{baseName} {MaidenNamePrefix} {meFile.MaidenName}"
+            : baseName;
     }
 }

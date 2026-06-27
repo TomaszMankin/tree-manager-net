@@ -19,7 +19,7 @@
         </StackPanel>
 
         <StackPanel>
-            <TextBlock Text="Czy przenieść tę osobę do drzewa?"
+            <TextBlock x:Name="HeaderBlock"
                        FontSize="14"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap"

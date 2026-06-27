@@ -50,7 +50,7 @@ public sealed class MainViewModelBidirSaveIntegrationTests : IDisposable
 
         _mockPickerService = new Mock<IPersonPickerService>();
         _mockConfirm = new Mock<IPromoteConfirmService>();
-        _mockConfirm.Setup(s => s.Confirm(It.IsAny<string>())).Returns(true);
+        _mockConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
         _mockInfoDialog = new Mock<IInfoDialogService>();
 
         var mockDirtyTracker = new Mock<IDirtyTracker>();
