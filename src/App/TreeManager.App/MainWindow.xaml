@@ -5,12 +5,14 @@
         xmlns:views="clr-namespace:TreeManager.App.Views"
         Title="{Binding WindowTitle}"
         Height="700" Width="1040" MinHeight="600" MinWidth="860"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI"
+        AutomationProperties.AutomationId="Window_Main">
     <DockPanel>
 
         <!-- Top menu bar — Narzędzia / OSOBA / SZKIC / DRZEWO + report button far right -->
         <DockPanel DockPanel.Dock="Top" Background="#E3F2FD">
             <Button DockPanel.Dock="Right"
+                    AutomationProperties.AutomationId="Btn_SendReport"
                     Content="⚠ Wyślij raport o błędzie"
                     Command="{Binding SendTestReportCommand}"
                     Background="#D32F2F" Foreground="White"
@@ -18,58 +20,59 @@
                     VerticalAlignment="Center"/>
 
             <Menu Background="#E3F2FD" BorderBrush="#BBDEFB" BorderThickness="0,0,0,1" Padding="8,4">
-                <MenuItem Header="Narzędzia">
-                    <MenuItem Header="Zmień folder" Command="{Binding ChangeRootFolderCommand}">
+                <MenuItem Header="Narzędzia" AutomationProperties.AutomationId="Menu_Tools">
+                    <MenuItem Header="Zmień folder" AutomationProperties.AutomationId="MenuItem_ChangeRoot" Command="{Binding ChangeRootFolderCommand}">
                         <MenuItem.Icon><TextBlock Text="📁"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Otwórz folder z danymi" Command="{Binding OpenDataFolderCommand}">
+                    <MenuItem Header="Otwórz folder z danymi" AutomationProperties.AutomationId="MenuItem_OpenDataFolder" Command="{Binding OpenDataFolderCommand}">
                         <MenuItem.Icon><TextBlock Text="🗂"/></MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
 
-                <MenuItem Header="OSOBA">
+                <MenuItem Header="OSOBA" AutomationProperties.AutomationId="Menu_Person">
                     <MenuItem Header="Nowa osoba"
+                              AutomationProperties.AutomationId="MenuItem_NewPerson"
                               Command="{Binding SwitchModeCommand}"
                               CommandParameter="{x:Static vm:AppMode.Add}">
                         <MenuItem.Icon><TextBlock Text="➕"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Edytuj osobę z drzewa" Command="{Binding OpenPersonCommand}">
+                    <MenuItem Header="Edytuj osobę z drzewa" AutomationProperties.AutomationId="MenuItem_EditPerson" Command="{Binding OpenPersonCommand}">
                         <MenuItem.Icon><TextBlock Text="✎"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Zapisz osobę i dodaj do drzewa" Command="{Binding SaveNewPersonCommand}">
+                    <MenuItem Header="Zapisz osobę i dodaj do drzewa" AutomationProperties.AutomationId="MenuItem_SaveNewPerson" Command="{Binding SaveNewPersonCommand}">
                         <MenuItem.Icon><TextBlock Text="💾"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Zapisz zmiany dla osoby na drzewie" Command="{Binding SaveTreeChangesCommand}">
+                    <MenuItem Header="Zapisz zmiany dla osoby na drzewie" AutomationProperties.AutomationId="MenuItem_SaveTreeChanges" Command="{Binding SaveTreeChangesCommand}">
                         <MenuItem.Icon><TextBlock Text="✔"/></MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
 
-                <MenuItem Header="SZKIC">
-                    <MenuItem Header="Wczytaj szkic osoby" Command="{Binding LoadDraftCommand}">
+                <MenuItem Header="SZKIC" AutomationProperties.AutomationId="Menu_Draft">
+                    <MenuItem Header="Wczytaj szkic osoby" AutomationProperties.AutomationId="MenuItem_LoadDraft" Command="{Binding LoadDraftCommand}">
                         <MenuItem.Icon><TextBlock Text="📂"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Zapisz osobę jako szkic" Command="{Binding SaveAsDraftCommand}">
+                    <MenuItem Header="Zapisz osobę jako szkic" AutomationProperties.AutomationId="MenuItem_SaveAsDraft" Command="{Binding SaveAsDraftCommand}">
                         <MenuItem.Icon><TextBlock Text="📝"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Zaktualizuj szkic osoby" Command="{Binding UpdateDraftCommand}">
+                    <MenuItem Header="Zaktualizuj szkic osoby" AutomationProperties.AutomationId="MenuItem_UpdateDraft" Command="{Binding UpdateDraftCommand}">
                         <MenuItem.Icon><TextBlock Text="🔄"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Dodaj szkic osoby do drzewa" Command="{Binding PromoteDraftCommand}">
+                    <MenuItem Header="Dodaj szkic osoby do drzewa" AutomationProperties.AutomationId="MenuItem_PromoteDraft" Command="{Binding PromoteDraftCommand}">
                         <MenuItem.Icon><TextBlock Text="⬆"/></MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
 
-                <MenuItem Header="DRZEWO">
-                    <MenuItem Header="Wybierz osobę główną" Command="{Binding SetRootPersonCommand}">
+                <MenuItem Header="DRZEWO" AutomationProperties.AutomationId="Menu_Tree">
+                    <MenuItem Header="Wybierz osobę główną" AutomationProperties.AutomationId="MenuItem_SetRootPerson" Command="{Binding SetRootPersonCommand}">
                         <MenuItem.Icon><TextBlock Text="★"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Generuj Drzewo" Command="{Binding GenerateFolderTreeCommand}">
+                    <MenuItem Header="Generuj Drzewo" AutomationProperties.AutomationId="MenuItem_GenerateFolderTree" Command="{Binding GenerateFolderTreeCommand}">
                         <MenuItem.Icon><TextBlock Text="🌳"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Generuj Rody" Command="{Binding GenerateLineageFoldersCommand}">
+                    <MenuItem Header="Generuj Rody" AutomationProperties.AutomationId="MenuItem_GenerateLineage" Command="{Binding GenerateLineageFoldersCommand}">
                         <MenuItem.Icon><TextBlock Text="👪"/></MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Sprawdź spójność" Command="{Binding ValidateTreeCommand}">
+                    <MenuItem Header="Sprawdź spójność" AutomationProperties.AutomationId="MenuItem_ValidateTree" Command="{Binding ValidateTreeCommand}">
                         <MenuItem.Icon><TextBlock Text="🔍"/></MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
@@ -102,7 +105,7 @@
         <!-- Mode-tinted content area -->
         <Grid Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}">
             <TabControl Margin="0" Background="Transparent" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0">
-                <TabItem Header="1.  Dane osoby">
+                <TabItem Header="1.  Dane osoby" AutomationProperties.AutomationId="Tab_PersonData">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <views:PersonDataTab DataContext="{Binding Person}"/>
@@ -111,10 +114,10 @@
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="2.  Rodzina">
+                <TabItem Header="2.  Rodzina" AutomationProperties.AutomationId="Tab_Family">
                     <views:FamilyTab DataContext="{Binding Family}"/>
                 </TabItem>
-                <TabItem Header="3.  Notatki">
+                <TabItem Header="3.  Notatki" AutomationProperties.AutomationId="Tab_Notes">
                     <views:NotesTab DataContext="{Binding Notes}"/>
                 </TabItem>
             </TabControl>

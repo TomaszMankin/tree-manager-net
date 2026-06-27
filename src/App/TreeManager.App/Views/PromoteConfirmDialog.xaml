@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Przenieś do drzewa"
+        AutomationProperties.AutomationId="Dialog_PromoteConfirm"
         Height="240" Width="420"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
@@ -11,9 +12,11 @@
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button x:Name="TakButton" Content="Tak" Width="90" Margin="0,0,8,0"
+                    AutomationProperties.AutomationId="Btn_PromoteConfirmYes"
                     IsDefault="True"
                     Click="TakButton_Click"/>
             <Button x:Name="NieButton" Content="Nie" Width="90"
+                    AutomationProperties.AutomationId="Btn_PromoteConfirmNo"
                     IsCancel="True"
                     Click="NieButton_Click"/>
         </StackPanel>

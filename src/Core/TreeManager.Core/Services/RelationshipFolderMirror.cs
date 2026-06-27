@@ -11,10 +11,10 @@ namespace TreeManager.Core.Services;
 
 public sealed class RelationshipFolderMirror : IRelationshipFolderMirror
 {
-    private const string ParentsSubfolder = "Rodzice";
-    private const string ChildrenSubfolder = "Dzieci";
-    private const string SpousesSubfolder = "Małżonkowie";
-    private const string SiblingsSubfolder = "Rodzeństwo";
+    private const string ParentsSubfolder = RelationshipFolderNames.Parents;
+    private const string ChildrenSubfolder = RelationshipFolderNames.Children;
+    private const string SpousesSubfolder = RelationshipFolderNames.Spouses;
+    private const string SiblingsSubfolder = RelationshipFolderNames.Siblings;
 
     private readonly IFileSystemFacade _fs;
     private readonly IShortcutCreator _shortcutCreator;

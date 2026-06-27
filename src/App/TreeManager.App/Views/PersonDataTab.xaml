@@ -13,36 +13,41 @@
         <TextBlock Text="Imię i nazwisko" Style="{StaticResource SectionHeader}"/>
 
         <TextBlock Text="Imię *" Style="{StaticResource FieldLabel}"/>
-        <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
+        <TextBox AutomationProperties.AutomationId="Field_FirstName"
+                 Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
 
         <TextBlock Text="Inne imiona (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherFirstNames}"/>
+        <views:EditableStringListControl AutomationProperties.AutomationId="List_OtherFirstNames" DataContext="{Binding OtherFirstNames}"/>
 
         <TextBlock Text="Nazwisko *" Style="{StaticResource FieldLabel}"/>
-        <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
+        <TextBox AutomationProperties.AutomationId="Field_LastName"
+                 Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
 
         <TextBlock Text="Inne nazwiska (opcjonalnie)" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherLastNames}"/>
+        <views:EditableStringListControl AutomationProperties.AutomationId="List_OtherLastNames" DataContext="{Binding OtherLastNames}"/>
 
         <Separator Margin="0,16,0,20" Background="#E0E0E0"/>
 
         <TextBlock Text="Dodatkowe informacje" Style="{StaticResource SectionHeader}"/>
 
-        <CheckBox Content="Ma nazwisko panieńskie" IsChecked="{Binding HasMaidenName}" Margin="0,0,0,12" FontSize="14"/>
+        <CheckBox Content="Ma nazwisko panieńskie" AutomationProperties.AutomationId="Check_HasMaidenName" IsChecked="{Binding HasMaidenName}" Margin="0,0,0,12" FontSize="14"/>
 
         <TextBlock Text="Nazwisko panieńskie" Style="{StaticResource FieldLabel}"/>
-        <TextBox Text="{Binding MaidenName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding HasMaidenName}"/>
+        <TextBox AutomationProperties.AutomationId="Field_MaidenName"
+                 Text="{Binding MaidenName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding HasMaidenName}"/>
 
         <TextBlock Text="Inne nazwiska panieńskie" Style="{StaticResource FieldLabel}"/>
-        <views:EditableStringListControl DataContext="{Binding OtherMaidenNames}"
+        <views:EditableStringListControl AutomationProperties.AutomationId="List_OtherMaidenNames" DataContext="{Binding OtherMaidenNames}"
                  IsEnabled="{Binding DataContext.HasMaidenName, RelativeSource={RelativeSource AncestorType=views:PersonDataTab}}"/>
 
         <TextBlock Text="Płeć *" Style="{StaticResource FieldLabel}"/>
         <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
             <RadioButton Content="Mężczyzna" FontSize="16"
+                         AutomationProperties.AutomationId="Radio_SexMale"
                          IsChecked="{Binding Sex, Converter={StaticResource SexToBoolConverter}, ConverterParameter={x:Static domain:Sex.Male}}"
                          Margin="0,0,32,0" VerticalAlignment="Center"/>
             <RadioButton Content="Kobieta" FontSize="16"
+                         AutomationProperties.AutomationId="Radio_SexFemale"
                          IsChecked="{Binding Sex, Converter={StaticResource SexToBoolConverter}, ConverterParameter={x:Static domain:Sex.Female}}"
                          VerticalAlignment="Center"/>
         </StackPanel>

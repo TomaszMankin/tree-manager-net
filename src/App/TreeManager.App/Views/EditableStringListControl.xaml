@@ -29,12 +29,14 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0" Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox Grid.Column="0" AutomationProperties.AutomationId="Field_StringListInput"
+                     Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Return" Command="{Binding AddCommand}"/>
                 </TextBox.InputBindings>
             </TextBox>
-            <Button Grid.Column="1" Content="Dodaj" Padding="14,8" Margin="4,0,0,0"
+            <Button Grid.Column="1" Content="Dodaj" AutomationProperties.AutomationId="Btn_StringListAdd"
+                    Padding="14,8" Margin="4,0,0,0"
                     Command="{Binding AddCommand}"/>
         </Grid>
     </StackPanel>

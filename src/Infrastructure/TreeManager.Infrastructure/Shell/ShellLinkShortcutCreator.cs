@@ -65,9 +65,8 @@ public sealed class ShellLinkShortcutCreator : IShortcutCreator
 
     /// <summary>
     /// Resolves the target path of an existing .lnk file via IShellLinkW.GetPath.
-    /// Used in tests to verify round-trip correctness. Not part of IShortcutCreator.
     /// </summary>
-    public static string Resolve(string linkFilePath)
+    public string Resolve(string linkFilePath)
     {
         HRESULT coInitHr = PInvoke.CoInitializeEx(COINIT.COINIT_APARTMENTTHREADED);
         bool initializedHere = coInitHr.Value == 0;
