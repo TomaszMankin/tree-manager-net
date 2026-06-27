@@ -9,4 +9,7 @@ public sealed record PersonEditDependencies(
     IDirtyTracker DirtyTracker,
     IDirtyGuardService DirtyGuard,
     IDraftRepository DraftRepository,
-    IDraftPromoter DraftPromoter);
+    IDraftPromoter DraftPromoter,
+    IPromoteConfirmService PromoteConfirmService,
+    IFolderRevealService FolderRevealService,
+    IInfoDialogService InfoDialog);

@@ -1,6 +1,14 @@
 ## .gitignore for tree-manager-net — Visual Studio + dotnet + Rider + project-specific
 ## Base: github/gitignore VisualStudio.gitignore + Dotnet.gitignore
 
+# Local-only large assets (ISOs, VM images) — never committed
+assets/
+!assets/README.md
+
+# Coverage artifacts (build noise)
+coverage.json
+coverage_excl/
+
 # User-specific Visual Studio files
 *.rsuser
 *.suo

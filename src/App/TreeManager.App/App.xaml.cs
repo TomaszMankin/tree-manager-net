@@ -39,6 +39,12 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+        var earlyRoot = TryReadEarlyRootPath();
+        if (!string.IsNullOrEmpty(earlyRoot))
+        {
+            new LoggingBootstrapper().Configure(earlyRoot);
+        }
+
         _services = BuildServiceProvider();
 
         var bootstrapper = _services.GetRequiredService<StartupBootstrapper>();
@@ -49,7 +55,11 @@ public partial class App : Application
             return;
         }
 
-        _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+        if (!string.Equals(result.RootPath, earlyRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            _services.GetRequiredService<LoggingBootstrapper>().Configure(result.RootPath);
+        }
+
         _services.GetRequiredService<IQueueRetryService>().Start();
 
         _services.GetRequiredService<MainWindow>().Show();
@@ -88,7 +98,7 @@ public partial class App : Application
 
         var fallbackPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TreeManager",
+            "TreeManagerNet",
             "crash-fallback.log");
 
         try
@@ -116,7 +126,25 @@ public partial class App : Application
             return;
         }
 
-        _services.GetRequiredService<CrashReporter>().Report(ex, source);
+        _services.GetRequiredService<ICrashReporter>().Report(ex, source);
+    }
+
+    private static string TryReadEarlyRootPath()
+    {
+        try
+        {
+            var pointerPath = RootPointerStore.ResolveDefaultPointerPath();
+            if (!File.Exists(pointerPath))
+            {
+                return string.Empty;
+            }
+            var path = File.ReadAllText(pointerPath).Trim();
+            return Directory.Exists(path) ? path : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static void ShowFallbackDialog()
@@ -149,7 +177,11 @@ public partial class App : Application
         services.AddSingleton<IDirtyGuardService, DirtyGuardService>();
         services.AddSingleton<IDraftRepository, DraftRepository>();
         services.AddSingleton<IDraftPromoter, DraftPromoter>();
+        services.AddSingleton<IPromoteConfirmService, PromoteConfirmService>();
+        services.AddSingleton<IFolderRevealService, FolderRevealService>();
+        services.AddSingleton<IInfoDialogService, InfoDialogService>();
         services.AddSingleton<PersonEditDependencies>();
+        services.AddSingleton<IRelationshipFolderMirror, RelationshipFolderMirror>();
         services.AddSingleton<IShortcutCreator, ShellLinkShortcutCreator>();
         services.AddSingleton<IFolderTreeGenerator, FolderTreeGenerator>();
         services.AddSingleton<IFolderTreeSettingsStore, FolderTreeSettingsStore>();
@@ -178,7 +210,8 @@ public partial class App : Application
                 sp.GetRequiredService<ILogger>()));
 
         services.AddSingleton<IQueueRetryService, QueueRetryService>();
-        services.AddSingleton<CrashReporter>();
+        services.AddSingleton<ICrashReporter, CrashReporter>();
+        services.AddSingleton<IUserJournalService, UserJournalService>();
         services.AddSingleton<IUpdateService, VelopackUpdateService>();
         services.AddSingleton<IUpdatePromptService, UpdatePromptService>();
         services.AddSingleton<UpdateCoordinator>();

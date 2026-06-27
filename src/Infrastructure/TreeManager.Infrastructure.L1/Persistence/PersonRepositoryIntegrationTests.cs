@@ -4,8 +4,10 @@ using System.IO;
 using System.Text.Json;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Domain;
+using TreeManager.Core.Services;
 using TreeManager.Infrastructure.IO;
 using TreeManager.Infrastructure.Persistence;
+using TreeManager.Infrastructure.Shell;
 
 namespace TreeManager.Infrastructure.L1.Persistence;
 
@@ -21,7 +23,9 @@ public class PersonRepositoryIntegrationTests : IDisposable
 
         var fs = new FileSystemFacade();
         var processor = new MeFileProcessor(fs);
-        _sut = new PersonRepository(fs, processor, Serilog.Log.Logger);
+        var shortcutCreator = new ShellLinkShortcutCreator(Serilog.Log.Logger);
+        var folderMirror = new RelationshipFolderMirror(fs, shortcutCreator, Serilog.Log.Logger);
+        _sut = new PersonRepository(fs, processor, folderMirror, Serilog.Log.Logger);
     }
 
     #region Create

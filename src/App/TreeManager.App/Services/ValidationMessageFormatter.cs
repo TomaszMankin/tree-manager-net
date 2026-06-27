@@ -82,10 +82,18 @@ public sealed class ValidationMessageFormatter : IValidationMessageFormatter
 
     private static string ResolveName(Guid id, IReadOnlyDictionary<Guid, MeFile> people)
     {
-        if (people.TryGetValue(id, out var meFile))
+        if (!people.TryGetValue(id, out var meFile))
         {
-            return FolderTreeNaming.FullName(meFile);
+            return MissingFolderSentinel;
         }
-        return MissingFolderSentinel;
+
+        var fullName = FolderTreeNaming.FullName(meFile);
+
+        if (string.IsNullOrWhiteSpace(meFile.FirstName) && string.IsNullOrWhiteSpace(meFile.LastName))
+        {
+            return $"{fullName} [{id.ToString()[..8]}]";
+        }
+
+        return fullName;
     }
 }

@@ -251,6 +251,88 @@ public class TreeConsistencyValidatorTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DetectOrphans_DoesNotReportOrphan_WhenPersonHasOnlySibling()
+    {
+        //Arrange — B-005: person with only a sibling relation must NOT be flagged orphan
+        var idA = Guid.NewGuid();
+        var idB = Guid.NewGuid();
+        var personA = PersonFixtureFactory.Build(idA, "Adam", "Braterski", Sex.Male,
+            siblingIds: [idB]);
+        var personB = PersonFixtureFactory.Build(idB, "Basia", "Braterska", Sex.Female,
+            siblingIds: [idA]);
+        var people = PersonFixtureFactory.BuildMap(personA, personB);
+
+        //Act
+        var issues = _sut.Validate(people);
+
+        //Assert
+        Assert.DoesNotContain(issues, i => i.Kind == ValidationIssueKind.Orphan);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Validate_ReturnsNoIssues_WhenSiblingPairFullyBidirectional()
+    {
+        //Arrange
+        var idA = Guid.NewGuid();
+        var idB = Guid.NewGuid();
+        var personA = PersonFixtureFactory.Build(idA, "Adam", "Siódmy", Sex.Male,
+            siblingIds: [idB]);
+        var personB = PersonFixtureFactory.Build(idB, "Basia", "Siódma", Sex.Female,
+            siblingIds: [idA]);
+        var people = PersonFixtureFactory.BuildMap(personA, personB);
+
+        //Act
+        var issues = _sut.Validate(people);
+
+        //Assert — no issues for a proper bidirectional sibling pair
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void DetectOneSidedRelationships_ReportsChildDirection_WhenChildMissingParentBackref()
+    {
+        //Arrange — A lists B as child, but B does not list A as parent
+        var idA = Guid.NewGuid();
+        var idB = Guid.NewGuid();
+        var personA = PersonFixtureFactory.Build(idA, "Anna", "Matka", Sex.Female,
+            childrenIds: [idB]);
+        var personB = PersonFixtureFactory.Build(idB, "Bartek", "Syn", Sex.Male);
+        var people = PersonFixtureFactory.BuildMap(personA, personB);
+
+        //Act
+        var issues = _sut.Validate(people);
+
+        //Assert
+        var oneSided = issues.Where(i => i.Kind == ValidationIssueKind.OneSidedRelationship).ToList();
+        Assert.Single(oneSided);
+        Assert.Equal(idA, oneSided[0].Subjects[0]);
+        Assert.Equal(idB, oneSided[0].Subjects[1]);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Validate_ReturnsNoIssues_WhenParentChildFullyBidirectional()
+    {
+        //Arrange — parent lists child, child lists parent
+        var idA = Guid.NewGuid();
+        var idB = Guid.NewGuid();
+        var personA = PersonFixtureFactory.Build(idA, "Anna", "Rodzic", Sex.Female,
+            childrenIds: [idB]);
+        var personB = PersonFixtureFactory.Build(idB, "Bartek", "Dziecko", Sex.Male,
+            parentIds: [idA]);
+        var people = PersonFixtureFactory.BuildMap(personA, personB);
+
+        //Act
+        var issues = _sut.Validate(people);
+
+        //Assert
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
     public void Validate_DoesNotReportOrphan_WhenPersonHasAtLeastOneLink()
     {
         //Arrange

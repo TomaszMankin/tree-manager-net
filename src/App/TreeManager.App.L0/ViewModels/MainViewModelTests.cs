@@ -5,6 +5,7 @@ using Moq;
 using Serilog;
 using TreeManager.App.Services;
 using TreeManager.App.ViewModels;
+using TreeManager.App.Converters;
 using TreeManager.Common.TestUtilities;
 using TreeManager.Core.Abstractions.Persistence;
 using TreeManager.Core.Abstractions.Services;
@@ -35,6 +36,12 @@ public class MainViewModelTests
     private readonly Mock<IValidationMessageFormatter> _mockFormatter;
     private readonly Mock<IValidationReportService> _mockReportService;
     private readonly Mock<IMeFileProcessor> _mockProcessor;
+    private readonly Mock<IPromoteConfirmService> _mockPromoteConfirm;
+    private readonly Mock<IFolderRevealService> _mockFolderReveal;
+    private readonly Mock<IInfoDialogService> _mockInfoDialog;
+    private readonly Mock<IRootPickerService> _mockRootPickerService;
+    private readonly Mock<ICrashReporter> _mockCrashReporter;
+    private readonly Mock<IUserJournalService> _mockJournal;
     private readonly Mock<ILogger> _mockLog;
     private readonly MainViewModel _sut;
 
@@ -56,12 +63,28 @@ public class MainViewModelTests
         _mockFormatter = new Mock<IValidationMessageFormatter>();
         _mockReportService = new Mock<IValidationReportService>();
         _mockProcessor = new Mock<IMeFileProcessor>();
+        _mockPromoteConfirm = new Mock<IPromoteConfirmService>();
+        _mockFolderReveal = new Mock<IFolderRevealService>();
+        _mockInfoDialog = new Mock<IInfoDialogService>();
+        _mockRootPickerService = new Mock<IRootPickerService>();
+        _mockCrashReporter = new Mock<ICrashReporter>();
+        _mockJournal = new Mock<IUserJournalService>();
         _mockLog = new Mock<ILogger>();
 
         _mockRootPointerStore.Setup(x => x.Read()).Returns(FakeRoot);
 
+        // Default: directory service returns empty list — used by ResetToBlank in ctor and OpenPerson
+        _mockDirectoryService
+            .Setup(s => s.GetAll(It.IsAny<string>()))
+            .Returns(new List<PersonSummary>());
+
         // Default: not dirty — existing tests proceed unchanged
         _mockDirtyTracker.Setup(x => x.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>())).Returns(false);
+
+        // Default: root person is set
+        _mockFolderTreeSettings
+            .Setup(s => s.GetRootPersonId(It.IsAny<string>()))
+            .Returns(Guid.NewGuid());
 
         // Default: FolderTreeGenerator.Generate returns success
         _mockFolderTreeGenerator
@@ -88,6 +111,11 @@ public class MainViewModelTests
             .Setup(p => p.ScanMeFiles(It.IsAny<string>()))
             .Returns(new List<string>());
 
+        // Default: promote confirm accepts — keeps all existing PromoteDraft tests green
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
+
+        // Default: folder reveal is a no-op
+
         var deps = new PersonEditDependencies(
             _mockDirectoryService.Object,
             _mockPickerService.Object,
@@ -95,7 +123,10 @@ public class MainViewModelTests
             _mockDirtyTracker.Object,
             _mockDirtyGuard.Object,
             _mockDraftRepository.Object,
-            _mockDraftPromoter.Object);
+            _mockDraftPromoter.Object,
+            _mockPromoteConfirm.Object,
+            _mockFolderReveal.Object,
+            _mockInfoDialog.Object);
 
         var folderTreeDeps = new FolderTreeCommandDependencies(
             _mockFolderTreeGenerator.Object,
@@ -118,7 +149,10 @@ public class MainViewModelTests
             deps,
             folderTreeDeps,
             validationDeps,
-            _mockLog.Object);
+            _mockLog.Object,
+            _mockRootPickerService.Object,
+            _mockCrashReporter.Object,
+            _mockJournal.Object);
     }
 
     #region SwitchMode
@@ -969,97 +1003,36 @@ public class MainViewModelTests
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_CallsPickerWithDirectoryPeople_WhenInvoked()
+    public void GenerateFolderTree_SetsError_WhenNoRootPersonSet()
     {
         //Arrange
-        var people = new List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Adam Kowalski") };
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(people);
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(people[0]);
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
 
         //Act
         _sut.GenerateFolderTreeCommand.Execute(null);
 
         //Assert
-        _mockDirectoryService.Verify(s => s.GetAll(FakeRoot), Times.Once());
-        _mockPickerService.Verify(s => s.PickPerson(people), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_DoesNothing_WhenPickerReturnsNull()
-    {
-        //Arrange
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns((PersonSummary)null);
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("osoby głównej", _sut.ErrorMessage);
         _mockFolderTreeGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_PersistsSelectedRootPerson_WhenPersonChosen()
+    public void GenerateFolderTree_RunsGeneration_WhenRootPersonSet()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockFolderTreeGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((5, new List<string>()));
 
         //Act
         _sut.GenerateFolderTreeCommand.Execute(null);
 
         //Assert
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_CallsGenerateWithRootPathAndChosenGuid_WhenPersonChosen()
-    {
-        //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Eva Nowakowska");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
-        _mockFolderTreeGenerator.Verify(g => g.Generate(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-    }
-
-    [Fact]
-    [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateFolderTree_SetsSuccessMessage_WhenGenerateSucceeds()
-    {
-        //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-        _mockFolderTreeGenerator
-            .Setup(g => g.Generate(FakeRoot, chosen.UniqueIdentifier))
-            .Returns((7, new List<string>()));
-
-        //Act
-        _sut.GenerateFolderTreeCommand.Execute(null);
-
-        //Assert
-        Assert.Contains("7", _sut.StatusMessage);
+        _mockFolderTreeGenerator.Verify(g => g.Generate(FakeRoot, rootId), Times.Once());
         Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("5", _sut.StatusMessage);
     }
 
     [Fact]
@@ -1067,11 +1040,6 @@ public class MainViewModelTests
     public void GenerateFolderTree_SetsErrorMessage_WhenGenerateThrows()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
         _mockFolderTreeGenerator
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
             .Throws<InvalidOperationException>();
@@ -1222,48 +1190,276 @@ public class MainViewModelTests
 
     #endregion
 
-    #region GenerateLineageFolders
+    #region StatusMessage — Save and SaveAsDraft
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateLineageFolders_GeneratesAndReportsCount_WhenPersonPicked()
+    public void Save_SetsStatusMessage_OnSuccessfulSave()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
-        _mockLineageFolderGenerator
-            .Setup(g => g.Generate(FakeRoot, chosen.UniqueIdentifier))
-            .Returns((9, new List<string>()));
+        AddOneRelationship();
 
         //Act
-        _sut.GenerateLineageFoldersCommand.Execute(null);
+        _sut.SaveCommand.Execute(null);
 
         //Assert
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-        _mockLineageFolderGenerator.Verify(g => g.Generate(FakeRoot, chosen.UniqueIdentifier), Times.Once());
-        Assert.Contains("9", _sut.StatusMessage);
+        Assert.Equal("Zapisano osobę.", _sut.StatusMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_SetsStatusMessage_WhenDraftSaved()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Zapisano szkic.", _sut.StatusMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ClearsStatusMessage_AtStartOfCommand()
+    {
+        //Arrange — set a stale status by loading a person which sets StatusMessage indirectly
+        _sut.StatusMessage = "Stary komunikat";
+        _mockPersonRepository
+            .Setup(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()))
+            .Throws<IOException>();
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert — error path: StatusMessage was cleared at start
+        Assert.True(string.IsNullOrEmpty(_sut.StatusMessage));
+    }
+
+    #endregion
+
+    #region SwitchMode — Add reset and picker load
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_ClearsPersonFields_WhenSwitchingToAdd()
+    {
+        //Arrange — load a person so fields have data
+        SimulateLoadedPerson();
+        _sut.Person.FirstName = "SomeValue";
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert
+        Assert.Equal(string.Empty, _sut.Person.FirstName);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_LoadsTreePeopleIntoPickers_WhenSwitchingToAdd()
+    {
+        //Arrange — put sut in EditTree mode first so switching to Add is not a no-op
+        _sut.SwitchModeCommand.Execute(AppMode.EditTree);
+        var person1 = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
+        var person2 = new PersonSummary(Guid.NewGuid(), "Ewa Nowak");
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new List<PersonSummary> { person1, person2 });
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert — pickers loaded with 2 people; no selections, no exclusions → 2 candidates
+        Assert.Equal(2, _sut.Family.Parents.Candidates.Count);
+    }
+
+    #endregion
+
+    #region WindowTitle
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void WindowTitle_ReflectsMode_WhenModeChanges()
+    {
+        //Arrange — start in Add
+        Assert.Contains("Dodawanie nowej osoby", _sut.WindowTitle);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.EditTree);
+
+        //Assert
+        Assert.Contains("Edycja osoby z drzewa", _sut.WindowTitle);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void WindowTitle_ContainsEditDraftLabel_WhenInEditDraftMode()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Assert
+        Assert.Contains("Edycja szkicu osoby", _sut.WindowTitle);
+    }
+
+    #endregion
+
+    #region PromoteDraft — CanExecute
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_CanExecuteFalse_WhenModeIsAdd()
+    {
+        //Arrange — default mode is Add
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+
+        //Assert
+        Assert.False(_sut.PromoteDraftCommand.CanExecute(null));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_CanExecuteTrue_WhenModeIsEditDraft()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Assert
+        Assert.True(_sut.PromoteDraftCommand.CanExecute(null));
+    }
+
+    #endregion
+
+    #region PromoteDraft — confirm gate
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_DoesNotPromote_WhenConfirmDeclined()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_Promotes_WhenConfirmAccepted()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        _mockDraftPromoter.Verify(x => x.Promote(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void PromoteDraft_PassesSummaryContainingPersonName_WhenConfirming()
+    {
+        //Arrange
+        var draftId = Guid.NewGuid();
+        var draftSummary = new PersonSummary(draftId, "Maria Wiśniewska");
+        var draftMeFile = new MeFile { UniqueIdentifier = draftId, PersonName = "Maria Wiśniewska", FirstName = "Maria", LastName = "Wiśniewska" };
+        SetupDraftPickAndRead(draftSummary, draftMeFile);
+        _sut.LoadDraftCommand.Execute(null);
+
+        string capturedSummary = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => capturedSummary = s)
+            .Returns(true);
+
+        //Act
+        _sut.PromoteDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotNull(capturedSummary);
+        Assert.Contains("Maria", capturedSummary);
+    }
+
+    #endregion
+
+    #region OpenDataFolder
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenDataFolder_RevealsRootPath_WhenRootSet()
+    {
+        //Arrange — root is set to FakeRoot by default
+
+        //Act
+        _sut.OpenDataFolderCommand.Execute(null);
+
+        //Assert
+        _mockFolderReveal.Verify(s => s.Reveal(FakeRoot), Times.Once());
         Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
     }
 
     [Fact]
     [Trait(TestTiers.TraitName, TestTiers.L0)]
-    public void GenerateLineageFolders_DoesNothing_WhenPickerCancels()
+    public void OpenDataFolder_SetsError_WhenRootPathEmpty()
     {
         //Arrange
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns((PersonSummary)null);
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.OpenDataFolderCommand.Execute(null);
+
+        //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        _mockFolderReveal.Verify(s => s.Reveal(It.IsAny<string>()), Times.Never());
+    }
+
+    #endregion
+
+    #region GenerateLineageFolders
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_SetsError_WhenNoRootPersonSet()
+    {
+        //Arrange
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
 
         //Act
         _sut.GenerateLineageFoldersCommand.Execute(null);
 
         //Assert
+        Assert.False(string.IsNullOrEmpty(_sut.ErrorMessage));
+        Assert.Contains("osoby głównej", _sut.ErrorMessage);
         _mockLineageFolderGenerator.Verify(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
-        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_RunsGeneration_WhenRootPersonSet()
+    {
+        //Arrange
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockLineageFolderGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((9, new List<string>()));
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockLineageFolderGenerator.Verify(g => g.Generate(FakeRoot, rootId), Times.Once());
+        Assert.Contains("9", _sut.StatusMessage);
+        Assert.True(string.IsNullOrEmpty(_sut.ErrorMessage));
     }
 
     [Fact]
@@ -1271,11 +1467,6 @@ public class MainViewModelTests
     public void GenerateLineageFolders_SetsError_WhenGeneratorThrows()
     {
         //Arrange
-        var chosen = new PersonSummary(Guid.NewGuid(), "Adam Kowalski");
-        _mockDirectoryService.Setup(s => s.GetAll(FakeRoot)).Returns(new List<PersonSummary> { chosen });
-        _mockPickerService
-            .Setup(s => s.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>()))
-            .Returns(chosen);
         _mockLineageFolderGenerator
             .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
             .Throws<InvalidOperationException>();
@@ -1366,5 +1557,849 @@ public class MainViewModelTests
         _mockDirectoryService
             .Setup(x => x.GetAll(FakeRoot))
             .Returns(new System.Collections.Generic.List<PersonSummary>());
+    }
+
+    #region SetRootPerson
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_DoesNotPersist_WhenPickerCancelled()
+    {
+        //Arrange
+        _mockPickerService.Setup(x => x.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>())).Returns((PersonSummary)null);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SetRootPerson_PersistsAndSetsStatus_WhenPersonSelected()
+    {
+        //Arrange
+        var personId = Guid.NewGuid();
+        var person = new PersonSummary(personId, "Jan Kowalski");
+        _mockPickerService.Setup(x => x.PickPerson(It.IsAny<IReadOnlyList<PersonSummary>>())).Returns(person);
+
+        //Act
+        _sut.SetRootPersonCommand.Execute(null);
+
+        //Assert
+        _mockFolderTreeSettings.Verify(s => s.SetRootPersonId(FakeRoot, personId), Times.Once());
+        Assert.Contains("Jan Kowalski", _sut.StatusMessage);
+    }
+
+    #endregion
+
+    #region ChangeRootFolder
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ChangeRootFolder_DoesNotWriteRoot_WhenPickerCancelled()
+    {
+        //Arrange
+        _mockRootPickerService.Setup(x => x.PickRoot()).Returns(string.Empty);
+
+        //Act
+        _sut.ChangeRootFolderCommand.Execute(null);
+
+        //Assert
+        _mockRootPointerStore.Verify(s => s.Write(It.IsAny<string>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ChangeRootFolder_WritesRootAndSetsStatus_WhenPathSelected()
+    {
+        //Arrange
+        const string NewRoot = @"C:\new\root";
+        _mockRootPickerService.Setup(x => x.PickRoot()).Returns(NewRoot);
+
+        //Act
+        _sut.ChangeRootFolderCommand.Execute(null);
+
+        //Assert
+        _mockRootPointerStore.Verify(s => s.Write(NewRoot), Times.Once());
+        Assert.NotEmpty(_sut.StatusMessage);
+    }
+
+    #endregion
+
+    #region SendTestReport
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SendTestReport_InvokesReportManual_Always()
+    {
+        //Act
+        _sut.SendTestReportCommand.Execute(null);
+
+        //Assert
+        _mockCrashReporter.Verify(r => r.ReportManual(It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region Save empty-root and post-Create mode
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SwitchesToEditTreeMode_WhenCreateSucceeds()
+    {
+        //Arrange — no original snapshot (Add mode), repository Create does not throw
+        _mockDirectoryService.Setup(x => x.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void LoadDraft_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.LoadDraftCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OpenPerson_SetsErrorMessage_WhenRootEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.OpenPersonCommand.Execute(null);
+
+        //Assert
+        Assert.NotEmpty(_sut.ErrorMessage);
+    }
+
+    #endregion
+
+    #region Constructor
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Constructor_CallsDirectoryServiceToPopulatePickers_Always()
+    {
+        //Assert
+        _mockDirectoryService.Verify(s => s.GetAll(FakeRoot), Times.AtLeastOnce());
+    }
+
+    #endregion
+
+    #region S-002 GenerateFolderTree modal dialog
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateFolderTree_ShowsInfoDialog_WhenRootPathEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.GenerateFolderTreeCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateFolderTree_ShowsInfoDialog_WhenNoRootPersonSet()
+    {
+        //Arrange
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
+
+        //Act
+        _sut.GenerateFolderTreeCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateFolderTree_ShowsInfoDialogWithCount_WhenSucceeds()
+    {
+        //Arrange
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockFolderTreeGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((7, new List<string>()));
+
+        //Act
+        _sut.GenerateFolderTreeCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(
+            d => d.Show(It.IsAny<string>(), It.Is<string>(m => m.Contains("7"))),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateFolderTree_ShowsInfoDialog_WhenGenerateThrows()
+    {
+        //Arrange
+        _mockFolderTreeGenerator
+            .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.GenerateFolderTreeCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region S-003 GenerateLineageFolders modal dialog
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_ShowsInfoDialog_WhenRootPathEmpty()
+    {
+        //Arrange
+        _mockRootPointerStore.Setup(x => x.Read()).Returns(string.Empty);
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_ShowsInfoDialog_WhenNoRootPersonSet()
+    {
+        //Arrange
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(Guid.Empty);
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_ShowsInfoDialogWithCount_WhenSucceeds()
+    {
+        //Arrange
+        var rootId = Guid.NewGuid();
+        _mockFolderTreeSettings.Setup(s => s.GetRootPersonId(FakeRoot)).Returns(rootId);
+        _mockLineageFolderGenerator.Setup(g => g.Generate(FakeRoot, rootId)).Returns((4, new List<string>()));
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(
+            d => d.Show(It.IsAny<string>(), It.Is<string>(m => m.Contains("4"))),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_ShowsInfoDialog_WhenGenerateThrows()
+    {
+        //Arrange
+        _mockLineageFolderGenerator
+            .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void GenerateLineageFolders_ShowsInfoDialog_WhenIntegrityExceptionThrown()
+    {
+        //Arrange
+        _mockLineageFolderGenerator
+            .Setup(g => g.Generate(It.IsAny<string>(), It.IsAny<Guid>()))
+            .Throws(new TreeIntegrityException("test integrity error"));
+
+        //Act
+        _sut.GenerateLineageFoldersCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region S-005 false dirty prompt eliminated
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SwitchMode_CallsConfirmDiscard_WhenFieldChangedAfterSave()
+    {
+        //Arrange — save first
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new List<PersonSummary>());
+        _sut.SaveCommand.Execute(null);
+
+        _mockDirtyTracker
+            .Setup(t => t.IsDirty(It.IsAny<MeFile>(), It.IsAny<MeFile>()))
+            .Returns(true);
+        _mockDirtyGuard.Setup(g => g.ConfirmDiscard()).Returns(true);
+
+        //Act
+        _sut.SwitchModeCommand.Execute(AppMode.Add);
+
+        //Assert
+        _mockDirtyGuard.Verify(g => g.ConfirmDiscard(), Times.Once());
+    }
+
+    #endregion
+
+    #region S-006 SaveAsDraft mode transition + dialog
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_TransitionsToEditDraftMode_WhenSucceeds()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_ShowsInfoDialog_WhenSucceeds()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveAsDraft_DoesNotTransitionToEditDraft_WhenRepositoryThrows()
+    {
+        //Arrange
+        _mockDraftRepository
+            .Setup(x => x.SaveDraft(It.IsAny<MeFile>(), It.IsAny<string>()))
+            .Throws<InvalidOperationException>();
+
+        //Act
+        _sut.SaveAsDraftCommand.Execute(null);
+
+        //Assert — stays in Add mode
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+    }
+
+    #endregion
+
+    #region S-007 min-relationship modal dialog
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ShowsInfoDialog_WhenRelationshipCountIsZeroAndPeopleExist()
+    {
+        //Arrange — tree has existing people (guard fires)
+        _mockDirectoryService
+            .Setup(x => x.GetAll(FakeRoot))
+            .Returns(new List<PersonSummary> { new PersonSummary(Guid.NewGuid(), "Existing") });
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+    }
+
+    #endregion
+
+    #region S-009 post-save success dialog with path
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ShowsInfoDialogWithPath_WhenCreateSucceeds()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert — dialog shown with message containing person folder name
+        _mockInfoDialog.Verify(
+            d => d.Show(It.IsAny<string>(), It.Is<string>(m => m.Contains("Jan Kowalski"))),
+            Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ShowsInfoDialog_WhenUpdateSucceeds()
+    {
+        //Arrange — load a person first
+        SimulateLoadedPerson();
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region S-010 pre-save confirm dialog
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_CallsPromoteConfirm_BeforeCreating()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPromoteConfirm.Verify(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_AbortsCreate_WhenConfirmDeclined()
+    {
+        //Arrange
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Never());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_Proceeds_WhenConfirmAccepted()
+    {
+        //Arrange
+        _mockPromoteConfirm.Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns(true);
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        _mockPersonRepository.Verify(x => x.Create(It.IsAny<MeFile>(), It.IsAny<string>()), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_PassesSummaryContainingPersonName_WhenConfirming()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Maria";
+        _sut.Person.LastName = "Wiśniewska";
+        AddOneRelationship();
+
+        string captured = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.NotNull(captured);
+        Assert.Contains("Maria", captured);
+    }
+
+    #endregion
+
+    #region Mode-aware pre-save dialog text
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ConfirmsWithEditText_WhenUpdatingExistingPerson()
+    {
+        //Arrange
+        SimulateLoadedPerson();
+        AddOneRelationship();
+        string capturedTitle = null;
+        string capturedHeader = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => { capturedTitle = t; capturedHeader = h; })
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Czy zapisać zmiany dla tej osoby?", capturedTitle);
+        Assert.Equal("Edytuj osobę:", capturedHeader);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_ConfirmsWithCreateText_WhenAddingNewPerson()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Jan";
+        _sut.Person.LastName = "Kowalski";
+        AddOneRelationship();
+        string capturedTitle = null;
+        string capturedHeader = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => { capturedTitle = t; capturedHeader = h; })
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal("Zapisz nową osobę", capturedTitle);
+        Assert.Equal("Nowa osoba:", capturedHeader);
+    }
+
+    #endregion
+
+    #region Maiden name in pre-save summary
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SummaryContainsMaidenName_WhenHasMaidenNameSet()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Anna";
+        _sut.Person.LastName = "Kowalska";
+        _sut.Person.HasMaidenName = true;
+        _sut.Person.MaidenName = "Nowak";
+        AddOneRelationship();
+        string captured = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Contains("zd. Nowak", captured);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_SummaryOmitsMaidenName_WhenHasMaidenNameUnset()
+    {
+        //Arrange
+        _sut.Person.FirstName = "Anna";
+        _sut.Person.LastName = "Kowalska";
+        _sut.Person.HasMaidenName = false;
+        _sut.Person.MaidenName = "Nowak";
+        AddOneRelationship();
+        string captured = null;
+        _mockPromoteConfirm
+            .Setup(s => s.Confirm(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((s, t, h) => captured = s)
+            .Returns(true);
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.DoesNotContain("zd.", captured);
+    }
+
+    #endregion
+
+    #region S-013 CanExecute per mode
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, true)]
+    [InlineData(AppMode.EditTree, true)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void Save_CanExecute_ReflectsMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Assert
+        Assert.Equal(expected, _sut.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, true)]
+    [InlineData(AppMode.EditTree, false)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void SaveAsDraft_CanExecute_ReflectsMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Assert
+        Assert.Equal(expected, _sut.SaveAsDraftCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, false)]
+    [InlineData(AppMode.EditTree, false)]
+    [InlineData(AppMode.EditDraft, true)]
+    public void UpdateDraft_CanExecute_ReflectsMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Assert
+        Assert.Equal(expected, _sut.UpdateDraftCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add)]
+    [InlineData(AppMode.EditTree)]
+    [InlineData(AppMode.EditDraft)]
+    public void SwitchMode_CanExecute_AlwaysTrue(AppMode mode)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Assert
+        Assert.True(_sut.SwitchModeCommand.CanExecute(AppMode.Add));
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_TransitionsToEditTree_WhenCreateSucceedsInAddMode()
+    {
+        //Arrange — add mode, no snapshot
+        Assert.Equal(AppMode.Add, _sut.CurrentMode);
+        _mockDirectoryService.Setup(x => x.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Save_StaysInEditTree_WhenUpdateSucceedsInEditTreeMode()
+    {
+        //Arrange — load a person (enters EditTree)
+        SimulateLoadedPerson();
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+        AddOneRelationship();
+
+        //Act
+        _sut.SaveCommand.Execute(null);
+
+        //Assert — stays in EditTree
+        Assert.Equal(AppMode.EditTree, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void UpdateDraft_OverwritesDraft_WhenInEditDraftMode()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+
+        //Act
+        _sut.UpdateDraftCommand.Execute(null);
+
+        //Assert — draft repository called to overwrite
+        _mockDraftRepository.Verify(r => r.SaveDraft(It.IsAny<MeFile>(), FakeRoot), Times.Once());
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void UpdateDraft_StaysInEditDraftMode_WhenSucceeds()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Act
+        _sut.UpdateDraftCommand.Execute(null);
+
+        //Assert
+        Assert.Equal(AppMode.EditDraft, _sut.CurrentMode);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void UpdateDraft_ShowsInfoDialog_WhenSucceeds()
+    {
+        //Arrange
+        SimulateLoadedDraft();
+
+        //Act
+        _sut.UpdateDraftCommand.Execute(null);
+
+        //Assert
+        _mockInfoDialog.Verify(d => d.Show(It.IsAny<string>(), It.IsAny<string>()), Times.Once());
+    }
+
+    #endregion
+
+    #region S-013 ModeToLabelConverter header strings
+
+    #endregion
+
+    #region SaveNewPersonCommand / SaveTreeChangesCommand — CanExecute Theory (B-003)
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, true)]
+    [InlineData(AppMode.EditTree, false)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void SaveNewPersonCommand_CanExecute_TrueOnlyInAddMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Act
+        var result = _sut.SaveNewPersonCommand.CanExecute(null);
+
+        //Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    [InlineData(AppMode.Add, false)]
+    [InlineData(AppMode.EditTree, true)]
+    [InlineData(AppMode.EditDraft, false)]
+    public void SaveTreeChangesCommand_CanExecute_TrueOnlyInEditTreeMode(AppMode mode, bool expected)
+    {
+        //Arrange
+        SetMode(mode);
+
+        //Act
+        var result = _sut.SaveTreeChangesCommand.CanExecute(null);
+
+        //Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void SaveNewPersonCommand_LogsAction_WhenExecuted()
+    {
+        //Arrange — in Add mode, repository Create succeeds
+        _mockDirectoryService.Setup(x => x.GetAll(FakeRoot)).Returns(new List<PersonSummary>());
+
+        //Act
+        _sut.SaveNewPersonCommand.Execute(null);
+
+        //Assert
+        _mockJournal.Verify(
+            j => j.LogAction(
+                It.Is<string>(a => a.Contains("Zapisz osobę i dodaj do drzewa")),
+                It.IsAny<string>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    private void SetMode(AppMode mode)
+    {
+        if (mode == AppMode.EditTree)
+        {
+            SimulateLoadedPerson();
+        }
+        else if (mode == AppMode.EditDraft)
+        {
+            SimulateLoadedDraft();
+        }
     }
 }

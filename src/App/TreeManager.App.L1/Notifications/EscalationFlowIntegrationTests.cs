@@ -34,7 +34,9 @@ public sealed class EscalationFlowIntegrationTests
             Log.Logger,
             new NoOpCrashDialogService(),
             escalator,
-            new Mock<IOfflineQueue>().Object);
+            new Mock<IOfflineQueue>().Object,
+            settingsMock.Object,
+            new Mock<IInfoDialogService>().Object);
 
         var exception = new InvalidOperationException("escalation-flow-test");
 

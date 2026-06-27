@@ -160,6 +160,37 @@ public class MeFileEqualityTests
         Assert.True(result);
     }
 
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Equals_ReturnsTrue_WhenOnlyPersonNameDiffers()
+    {
+        //Arrange — PersonName is derived; snapshot may hold "Jan Kowalski (2)" while
+        //           freshly recomputed state holds "Jan Kowalski"; must not be dirty.
+        var id = Guid.NewGuid();
+
+        var a = new MeFile
+        {
+            UniqueIdentifier = id,
+            FirstName = "Jan",
+            LastName = "Kowalski",
+            PersonName = "Jan Kowalski",
+        };
+
+        var b = new MeFile
+        {
+            UniqueIdentifier = id,
+            FirstName = "Jan",
+            LastName = "Kowalski",
+            PersonName = "Jan Kowalski (2)",
+        };
+
+        //Act
+        var result = a.Equals(b);
+
+        //Assert
+        Assert.True(result);
+    }
+
     #endregion
 
     #region GetHashCode

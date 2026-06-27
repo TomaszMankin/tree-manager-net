@@ -1,57 +1,111 @@
-﻿<Window x:Class="TreeManager.App.MainWindow"
+<Window x:Class="TreeManager.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:TreeManager.App.ViewModels"
         xmlns:views="clr-namespace:TreeManager.App.Views"
-        Title="TreeManager"
-        Height="700" Width="940" MinHeight="600" MinWidth="800"
-        FontFamily="Segoe UI">
+        Title="{Binding WindowTitle}"
+        Height="700" Width="1040" MinHeight="600" MinWidth="860"
+        FontFamily="Segoe UI"
+        AutomationProperties.AutomationId="Window_Main">
     <DockPanel>
 
-        <!-- Header bar -->
-        <Border DockPanel.Dock="Top" Background="#1565C0" Padding="22,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="TreeManager" FontSize="22" Foreground="White"
-                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"
-                           TextTrimming="CharacterEllipsis" MaxWidth="200"/>
-                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                    <Button Content="Dodaj osobę"
-                            Command="{Binding SwitchModeCommand}"
-                            CommandParameter="{x:Static vm:AppMode.Add}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Edytuj drzewo"
-                            Command="{Binding OpenPersonCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Edytuj szkic"
-                            Command="{Binding LoadDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Zapisz szkic"
-                            Command="{Binding SaveAsDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Przenieś do drzewa"
-                            Command="{Binding PromoteDraftCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Generuj Drzewo"
-                            Command="{Binding GenerateFolderTreeCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Generuj Rody"
-                            Command="{Binding GenerateLineageFoldersCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                    <Button Content="Sprawdź spójność"
-                            Command="{Binding ValidateTreeCommand}"
-                            Margin="4,0" Padding="14,8"/>
-                </WrapPanel>
-            </Grid>
+        <!-- Top menu bar — Narzędzia / OSOBA / SZKIC / DRZEWO + report button far right -->
+        <DockPanel DockPanel.Dock="Top" Background="#E3F2FD">
+            <Button DockPanel.Dock="Right"
+                    AutomationProperties.AutomationId="Btn_SendReport"
+                    Content="⚠ Wyślij raport o błędzie"
+                    Command="{Binding SendTestReportCommand}"
+                    Background="#D32F2F" Foreground="White"
+                    FontSize="14" Padding="14,6" Margin="8,4"
+                    VerticalAlignment="Center"/>
+
+            <Menu Background="#E3F2FD" BorderBrush="#BBDEFB" BorderThickness="0,0,0,1" Padding="8,4">
+                <MenuItem Header="Narzędzia" AutomationProperties.AutomationId="Menu_Tools">
+                    <MenuItem Header="Zmień folder" AutomationProperties.AutomationId="MenuItem_ChangeRoot" Command="{Binding ChangeRootFolderCommand}">
+                        <MenuItem.Icon><TextBlock Text="📁"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Otwórz folder z danymi" AutomationProperties.AutomationId="MenuItem_OpenDataFolder" Command="{Binding OpenDataFolderCommand}">
+                        <MenuItem.Icon><TextBlock Text="🗂"/></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+
+                <MenuItem Header="OSOBA" AutomationProperties.AutomationId="Menu_Person">
+                    <MenuItem Header="Nowa osoba"
+                              AutomationProperties.AutomationId="MenuItem_NewPerson"
+                              Command="{Binding SwitchModeCommand}"
+                              CommandParameter="{x:Static vm:AppMode.Add}">
+                        <MenuItem.Icon><TextBlock Text="➕"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Edytuj osobę z drzewa" AutomationProperties.AutomationId="MenuItem_EditPerson" Command="{Binding OpenPersonCommand}">
+                        <MenuItem.Icon><TextBlock Text="✎"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Zapisz osobę i dodaj do drzewa" AutomationProperties.AutomationId="MenuItem_SaveNewPerson" Command="{Binding SaveNewPersonCommand}">
+                        <MenuItem.Icon><TextBlock Text="💾"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Zapisz zmiany dla osoby na drzewie" AutomationProperties.AutomationId="MenuItem_SaveTreeChanges" Command="{Binding SaveTreeChangesCommand}">
+                        <MenuItem.Icon><TextBlock Text="✔"/></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+
+                <MenuItem Header="SZKIC" AutomationProperties.AutomationId="Menu_Draft">
+                    <MenuItem Header="Wczytaj szkic osoby" AutomationProperties.AutomationId="MenuItem_LoadDraft" Command="{Binding LoadDraftCommand}">
+                        <MenuItem.Icon><TextBlock Text="📂"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Zapisz osobę jako szkic" AutomationProperties.AutomationId="MenuItem_SaveAsDraft" Command="{Binding SaveAsDraftCommand}">
+                        <MenuItem.Icon><TextBlock Text="📝"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Zaktualizuj szkic osoby" AutomationProperties.AutomationId="MenuItem_UpdateDraft" Command="{Binding UpdateDraftCommand}">
+                        <MenuItem.Icon><TextBlock Text="🔄"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Dodaj szkic osoby do drzewa" AutomationProperties.AutomationId="MenuItem_PromoteDraft" Command="{Binding PromoteDraftCommand}">
+                        <MenuItem.Icon><TextBlock Text="⬆"/></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+
+                <MenuItem Header="DRZEWO" AutomationProperties.AutomationId="Menu_Tree">
+                    <MenuItem Header="Wybierz osobę główną" AutomationProperties.AutomationId="MenuItem_SetRootPerson" Command="{Binding SetRootPersonCommand}">
+                        <MenuItem.Icon><TextBlock Text="★"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Generuj Drzewo" AutomationProperties.AutomationId="MenuItem_GenerateFolderTree" Command="{Binding GenerateFolderTreeCommand}">
+                        <MenuItem.Icon><TextBlock Text="🌳"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Generuj Rody" AutomationProperties.AutomationId="MenuItem_GenerateLineage" Command="{Binding GenerateLineageFoldersCommand}">
+                        <MenuItem.Icon><TextBlock Text="👪"/></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Sprawdź spójność" AutomationProperties.AutomationId="MenuItem_ValidateTree" Command="{Binding ValidateTreeCommand}">
+                        <MenuItem.Icon><TextBlock Text="🔍"/></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+            </Menu>
+        </DockPanel>
+
+        <!-- Full-width mode indicator strip -->
+        <Border DockPanel.Dock="Top"
+                Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}"
+                Padding="22,8">
+            <TextBlock Text="{Binding CurrentMode, Converter={StaticResource ModeToLabelConverter}}"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="#1A237E"
+                       VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Bottom" Background="#F5F5F5" BorderBrush="#E0E0E0"
+                BorderThickness="0,1,0,0" Padding="22,6">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="#2E7D32" FontSize="13"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#C62828" FontSize="13"
+                           Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+            </StackPanel>
         </Border>
 
         <!-- Mode-tinted content area -->
         <Grid Background="{Binding CurrentMode, Converter={StaticResource ModeToBackgroundBrushConverter}}">
             <TabControl Margin="0" Background="Transparent" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0">
-                <TabItem Header="1.  Dane osoby">
+                <TabItem Header="1.  Dane osoby" AutomationProperties.AutomationId="Tab_PersonData">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <views:PersonDataTab DataContext="{Binding Person}"/>
@@ -60,10 +114,10 @@
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="2.  Rodzina">
+                <TabItem Header="2.  Rodzina" AutomationProperties.AutomationId="Tab_Family">
                     <views:FamilyTab DataContext="{Binding Family}"/>
                 </TabItem>
-                <TabItem Header="3.  Notatki">
+                <TabItem Header="3.  Notatki" AutomationProperties.AutomationId="Tab_Notes">
                     <views:NotesTab DataContext="{Binding Notes}"/>
                 </TabItem>
             </TabControl>

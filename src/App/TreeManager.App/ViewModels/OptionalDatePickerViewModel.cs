@@ -22,6 +22,7 @@ public sealed partial class OptionalDatePickerViewModel : ObservableObject
     private static bool IsIntFieldValid(string value, int min, int max)
     {
         if (string.IsNullOrEmpty(value)) { return true; }
+        if (value.All(c => c == '-')) { return true; }
         return int.TryParse(value, out var i) && i >= min && i <= max;
     }
 

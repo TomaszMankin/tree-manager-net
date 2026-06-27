@@ -10,7 +10,7 @@ public sealed class LoggingBootstrapper
     public static string BuildLogFilePath(string rootPath, DateTime date)
     {
         var fileName = $"{date:yyyy-MM-dd}__tree-manager.log";
-        return Path.Combine(rootPath, ".TreeManager", "logs", fileName);
+        return Path.Combine(rootPath, ".TreeManagerNet", "logs", fileName);
     }
 
     public void Configure(string rootPath, LogEventLevel minLevel = LogEventLevel.Information)

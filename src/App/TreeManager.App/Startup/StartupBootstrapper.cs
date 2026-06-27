@@ -1,3 +1,4 @@
+using System.IO;
 using TreeManager.App.Services;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Settings;
@@ -32,6 +33,13 @@ public sealed class StartupBootstrapper
         }
 
         _store.Write(picked);
+        InitialiseRootFolders(picked);
         return BootstrapResult.UseExisting(picked);
+    }
+
+    private void InitialiseRootFolders(string rootPath)
+    {
+        _fs.CreateDirectory(Path.Combine(rootPath, "Lista osób"));
+        _fs.CreateDirectory(Path.Combine(rootPath, "Poczekalnia"));
     }
 }

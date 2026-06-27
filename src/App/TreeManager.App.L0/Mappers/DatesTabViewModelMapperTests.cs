@@ -242,6 +242,40 @@ public class DatesTabViewModelMapperTests
 
     #endregion
 
+    #region DeathDate round-trip
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToMeFile_ProducesAllWildcardDeathString_WhenIsDeceasedTrueAndDatesEmpty()
+    {
+        //Arrange
+        var vm = new DatesTabViewModel { IsDeceased = true };
+
+        //Act
+        var result = vm.ToMeFile();
+
+        //Assert
+        Assert.Equal("--|--|----", result.DatesOfDeath);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void ToDatesTabViewModel_PreservesIsDeceased_WhenDatesOfDeathIsAllWildcard()
+    {
+        //Arrange
+        var meFile = new MeFile { DatesOfDeath = "--|--|----" };
+
+        //Act
+        var vm = meFile.ToDatesTabViewModel();
+        var roundTripped = vm.ToMeFile(meFile);
+
+        //Assert
+        Assert.True(vm.IsDeceased);
+        Assert.Equal("--|--|----", roundTripped.DatesOfDeath);
+    }
+
+    #endregion
+
     #region ToMeFile — qualifier flags
 
     [Fact]

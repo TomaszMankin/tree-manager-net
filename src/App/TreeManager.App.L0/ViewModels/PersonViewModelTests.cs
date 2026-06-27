@@ -57,4 +57,37 @@ public class PersonViewModelTests
     }
 
     #endregion
+
+    #region OtherNamesText bridge
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Reset_PopulatesOtherFirstNamesText_WhenOtherFirstNamesPresent()
+    {
+        //Arrange
+        var vm = new PersonViewModel();
+        var meFile = new MeFile { OtherFirstNames = "Janusz" };
+
+        //Act
+        vm.Reset(meFile);
+
+        //Assert
+        Assert.Equal("Janusz", vm.OtherFirstNamesText);
+    }
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void OtherFirstNamesText_UpdatesItems_WhenSet()
+    {
+        //Arrange
+        var vm = new PersonViewModel();
+
+        //Act
+        vm.OtherFirstNamesText = "Janusz\nTadeusz";
+
+        //Assert
+        Assert.Equal(["Janusz", "Tadeusz"], vm.OtherFirstNames.Items);
+    }
+
+    #endregion
 }

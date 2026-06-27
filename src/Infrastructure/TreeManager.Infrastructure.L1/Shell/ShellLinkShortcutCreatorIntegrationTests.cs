@@ -54,7 +54,7 @@ public class ShellLinkShortcutCreatorIntegrationTests : IDisposable
 
         //Act
         _sut.Create(targetDir, lnkPath);
-        var resolvedPath = ShellLinkShortcutCreator.Resolve(lnkPath);
+        var resolvedPath = _sut.Resolve(lnkPath);
 
         //Assert — compare via Path equality for case-canonicalization robustness (per CLAUDE.md runner note)
         var expected = new System.IO.DirectoryInfo(targetDir).FullName;
@@ -75,7 +75,7 @@ public class ShellLinkShortcutCreatorIntegrationTests : IDisposable
 
         //Act
         _sut.Create(targetDir, lnkPath);
-        var resolvedPath = ShellLinkShortcutCreator.Resolve(lnkPath);
+        var resolvedPath = _sut.Resolve(lnkPath);
 
         //Assert
         Assert.Contains("Żółć Łódź", resolvedPath);

@@ -41,9 +41,8 @@ public sealed class LoggingBootstrapperTests : IDisposable
         var path = LoggingBootstrapper.BuildLogFilePath(root, date);
 
         //Assert
-        Assert.Contains(".TreeManager", path);
+        Assert.Contains(".TreeManagerNet", path);
         Assert.Contains("logs", path);
-        Assert.DoesNotContain(".PyTreeManager", path);
     }
 
     [Fact]
@@ -75,7 +74,7 @@ public sealed class LoggingBootstrapperTests : IDisposable
         Log.CloseAndFlush();
 
         //Assert
-        var logsDir = Path.Combine(_tempRoot, ".TreeManager", "logs");
+        var logsDir = Path.Combine(_tempRoot, ".TreeManagerNet", "logs");
         var files = Directory.GetFiles(logsDir, "*.log");
         Assert.Single(files);
         var content = File.ReadAllText(files[0]);

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>TreeManager.App.L3</AssemblyName>
+    <RootNamespace>TreeManager.App.L3</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FlaUI.Core" Version="5.0.0" />
+    <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TreeManager.App\TreeManager.App.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\TreeManager.Infrastructure\TreeManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Common\TreeManager.UiTesting\TreeManager.UiTesting.csproj" />
+    <ProjectReference Include="..\..\Common\TreeManager.Common.TestUtilities\TreeManager.Common.TestUtilities.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -146,4 +146,29 @@ public class ValidationMessageFormatterTests
     }
 
     #endregion
+
+    #region Format — unknown name
+
+    [Fact]
+    [Trait(TestTiers.TraitName, TestTiers.L0)]
+    public void Format_IncludesIdentifierFragment_WhenPersonNameUnknown()
+    {
+        //Arrange — person has empty first and last name
+        var personId = Guid.NewGuid();
+        var person = PersonFixtureFactory.Build(personId, "", "", Sex.Male);
+        var people = PersonFixtureFactory.BuildMap(person);
+        var issues = new List<ValidationIssue>
+        {
+            new() { Kind = ValidationIssueKind.Orphan, Subjects = [personId] },
+        };
+
+        //Act
+        var messages = _sut.Format(issues, people);
+
+        //Assert — message must contain first 8 chars of the UUID in brackets
+        Assert.Single(messages);
+        Assert.Contains($"[{personId.ToString()[..8]}]", messages[0]);
+    }
+
+    #endregion
 }

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Serilog;
 using TreeManager.Core.Abstractions.IO;
 using TreeManager.Core.Abstractions.Settings;
 
@@ -10,21 +9,14 @@ public sealed class RootPointerStore : IRootPointerStore
 {
     private readonly IFileSystemFacade _fs;
     private readonly string _pointerPath;
-    private readonly string _legacyPointerPath;
-    private readonly ILogger _log;
 
-    public RootPointerStore(IFileSystemFacade fileSystem, ILogger log)
-        : this(fileSystem, ResolveDefaultPointerPath(), ResolveLegacyPointerPath(), log) { }
+    public RootPointerStore(IFileSystemFacade fileSystem)
+        : this(fileSystem, ResolveDefaultPointerPath()) { }
 
     public RootPointerStore(IFileSystemFacade fileSystem, string pointerPath)
-        : this(fileSystem, pointerPath, string.Empty, Log.Logger) { }
-
-    internal RootPointerStore(IFileSystemFacade fileSystem, string pointerPath, string legacyPointerPath, ILogger log)
     {
         _fs = fileSystem;
         _pointerPath = pointerPath;
-        _legacyPointerPath = legacyPointerPath;
-        _log = log;
     }
 
     public string Read()
@@ -32,11 +24,6 @@ public sealed class RootPointerStore : IRootPointerStore
         if (_fs.FileExists(_pointerPath))
         {
             return _fs.ReadAllText(_pointerPath).Trim();
-        }
-
-        if (!string.IsNullOrEmpty(_legacyPointerPath) && _fs.FileExists(_legacyPointerPath))
-        {
-            return MigrateFromLegacy();
         }
 
         return string.Empty;
@@ -57,33 +44,8 @@ public sealed class RootPointerStore : IRootPointerStore
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrEmpty(localAppData))
         {
-            return Path.Combine(Path.GetTempPath(), "PyTreeManager", "last_root.txt");
+            return Path.Combine(Path.GetTempPath(), "TreeManagerNet", "last_root.txt");
         }
-        return Path.Combine(localAppData, "PyTreeManager", "last_root.txt");
-    }
-
-    private static string ResolveLegacyPointerPath()
-    {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrEmpty(localAppData))
-        {
-            return Path.Combine(Path.GetTempPath(), "TreeManager", "last_root.txt");
-        }
-        return Path.Combine(localAppData, "TreeManager", "last_root.txt");
-    }
-
-    private string MigrateFromLegacy()
-    {
-        try
-        {
-            var value = _fs.ReadAllText(_legacyPointerPath).Trim();
-            Write(value);
-            return value;
-        }
-        catch (Exception ex)
-        {
-            _log.Error(ex, "RootPointerStore: failed to read legacy pointer {Path}", _legacyPointerPath);
-            return string.Empty;
-        }
+        return Path.Combine(localAppData, "TreeManagerNet", "last_root.txt");
     }
 }
