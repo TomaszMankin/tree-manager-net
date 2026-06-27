@@ -1,0 +1,25 @@
+name: UI runner preflight
+
+# Deterministic readiness gate for the dedicated UI-test VM runner (label: ui-tests).
+# An agent/operator triggers this (workflow_dispatch or before the UI suite) to confirm
+# the VM has everything needed for L3 FlaUI runs — .NET 10 SDK, Git, auto-logon,
+# animations/lock disabled, services trimmed, and the runner itself interactive (not a
+# service). The job runs ON the ui-tests runner and fails red if anything is missing.
+#
+# Trigger from the agent:
+#   gh workflow run ui-runner-preflight.yml --ref <branch>
+#   gh run watch <id>
+
+on:
+  workflow_dispatch:
+  workflow_call:        # so the UI-test workflow can gate on it as a prerequisite job
+
+jobs:
+  preflight:
+    runs-on: [self-hosted, ui-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify VM provisioning (deterministic)
+        shell: pwsh
+        run: ./Scripts/vm-verify-setup.ps1
